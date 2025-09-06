@@ -1,0 +1,47 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencies
+node_modules/
+/build
+/dist
+
+# Optional npm cache directory
+.npm
+
+# Environment variables
+
+
+# Caches
+.pnpm-store/
+.yarn-cache
+.next
+.nuxt
+
+# Coverage directory used by tools like jest
+coverage
+
+# Temporary files
+tmp
+/temp
+/private
+
+# Editor/IDE-specific files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Mac files
+.DS_Store
+
+# Linux files
+*~
