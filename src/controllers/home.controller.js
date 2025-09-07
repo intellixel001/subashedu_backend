@@ -357,8 +357,6 @@ const streamMaterial = asyncHandler(async (req, res, next) => {
     });
   }
 
-
-
   // Generate a signed URL with short expiration
   const signedUrl = cloudinary.utils.private_download_url(
     material.publicId,
@@ -374,6 +372,7 @@ const streamMaterial = asyncHandler(async (req, res, next) => {
     const response = await axios.get(signedUrl, { responseType: "stream" });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", "inline; filename=material.pdf");
+    console.log(response);
     response.data.pipe(res);
   } catch (error) {
     console.error("Error streaming PDF:", error);
@@ -404,12 +403,14 @@ const getMaterialForPurchase = asyncHandler(async (req, res, next) => {
 });
 
 const getMaterials = asyncHandler(async (req, res, next) => {
-  const materials = await Material.find({}).sort({ createdAt: -1 }).select("-forCourses -publicId -accessControl -contentUrl");
+  const materials = await Material.find({})
+    .sort({ createdAt: -1 })
+    .select("-forCourses -publicId -accessControl -contentUrl");
 
-  if(!materials){
-     return res
-    .status(500)
-    .json({ success: false, message: "successful fetch", materials: [] });
+  if (!materials) {
+    return res
+      .status(500)
+      .json({ success: false, message: "successful fetch", materials: [] });
   }
 
   return res
@@ -418,7 +419,6 @@ const getMaterials = asyncHandler(async (req, res, next) => {
 });
 
 export {
-  getMaterials,
   getAllCourse,
   getBlog,
   getBlogs,
@@ -427,6 +427,7 @@ export {
   getFreeClasses,
   getHomePageData,
   getMaterialForPurchase,
+  getMaterials,
   getNotice,
   homeController,
   searchCourses,
