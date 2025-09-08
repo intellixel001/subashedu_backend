@@ -31,6 +31,7 @@ import {
   getInvoices,
   getMaterialPaymentRequests,
   getMaterials,
+  getNotice,
   getNotification,
   getPendingPayments,
   getRoundedChartData,
@@ -136,6 +137,7 @@ router.route("/delete-payment").post(verifyAdminJwt, deletePayment);
 
 //notice
 router.route("/create-notice").post(verifyAdminJwt, createNotice);
+router.route("/get-notice").get(verifyAdminJwt, getNotice);
 router.route("/delete-notice").post(verifyAdminJwt, deleteNotice);
 
 //get invoices

@@ -2310,6 +2310,26 @@ const createNotice = asyncHandler(async (req, res, next) => {
   }
 });
 
+const getNotice = asyncHandler(async (req, res, next) => {
+  try {
+    // Check for existing notices
+    const currentNotices = await Notice.find({});
+
+    return res.status(201).json({
+      success: true,
+      message: "Notice showing successfully",
+      data: currentNotices,
+    });
+  } catch (error) {
+    console.error("Error creating notice:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create notice",
+      error: error.message,
+    });
+  }
+});
+
 const deleteNotice = asyncHandler(async (req, res, next) => {
   const clear = await Notice.deleteMany({});
 
@@ -3154,6 +3174,7 @@ export {
   getInvoices,
   getMaterialPaymentRequests,
   getMaterials,
+  getNotice,
   getNotification,
   getPendingPayments,
   getRoundedChartData,
