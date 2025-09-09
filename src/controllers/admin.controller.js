@@ -1,3 +1,4 @@
+import axios from "axios";
 import fs from "fs";
 import { sendPaymentConfirmationEmail } from "../lib/sendPaymentConfirmMail.js";
 import { FreeClass } from "../models/freeClass.model.js";
@@ -140,8 +141,6 @@ const loginAdmin = asyncHandler(async (req, res, next) => {
   const admin = await Admin.findOne({
     $or: [{ email: email }],
   }).select("+password");
-
-  console.log({ admin, email });
 
   if (!admin) {
     return res.status(404).json({
@@ -1801,8 +1800,6 @@ const createLiveClass = asyncHandler(async (req, res, next) => {
 
 const createRecordedClass = asyncHandler(async (req, res, next) => {
   // Log req.body and req.file for debugging
-  console.log("createRecordedClass req.body:", req.body);
-  console.log("createRecordedClass req.file:", req.file);
 
   const { title, subject, instructor, courseId } = req.body;
 
@@ -1908,7 +1905,6 @@ const deleteClass = asyncHandler(async (req, res, next) => {
       (classId) => classId.toString() !== _id
     );
     if (course.classes.length < initialLength) {
-      console.log(`Removed class ${_id} from course ${course._id}`);
       await course.save({ validateBeforeSave: false });
     } else {
       console.warn(
@@ -1927,7 +1923,6 @@ const deleteClass = asyncHandler(async (req, res, next) => {
     });
   }
 
-  console.log(`Class ${_id} deleted successfully`);
   return res.status(200).json({
     success: true,
     message: "Class deleted successfully",
@@ -2719,7 +2714,13 @@ const deleteBlog = asyncHandler(async (req, res) => {
 //   });
 // })
 
-const createMaterial = asyncHandler(async (req, res, next) => {
+import FormData from "form-data";
+
+const CDN_API = "https://cdn.adletica.com/upload";
+
+const CDN_UPLOAD_URL = "https://cdn.adletica.com/upload";
+
+const createMaterial = asyncHandler(async (req, res) => {
   const { title, price, forCourses, accessControl } = req.body;
 
   // Validation
@@ -2738,67 +2739,55 @@ const createMaterial = asyncHandler(async (req, res, next) => {
   if (forCourses) {
     try {
       parsedCourses = JSON.parse(forCourses);
-      if (!Array.isArray(parsedCourses)) {
+      if (!Array.isArray(parsedCourses))
         throw new Error("forCourses must be an array");
-      }
     } catch (error) {
       req.files.forEach((f) => fs.existsSync(f.path) && fs.unlinkSync(f.path));
-      return res.status(400).json({
-        success: false,
-        message: "Invalid forCourses format",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid forCourses format" });
     }
   }
 
-  // Upload PDFs to Cloudinary
+  // Upload PDFs to CDN
   const uploadedPdfs = [];
   try {
     for (const file of req.files) {
-      const uploadResult = await uploadPdfOnCloudinary(file.path, "materials");
-      if (!uploadResult?.url) {
-        throw new Error("Error uploading one of the PDFs");
-      }
+      const formData = new FormData();
+      formData.append("file", fs.createReadStream(file.path));
+
+      const response = await axios.post(CDN_UPLOAD_URL, formData, {
+        headers: formData.getHeaders(),
+      });
 
       uploadedPdfs.push({
-        url: uploadResult.url,
-        publicId: uploadResult.public_id,
+        url: response.data.url,
+        publicId: response.data.filename, // 👈 use filename as publicId
       });
 
       // Delete local temp file
-      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      if (fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
     }
   } catch (error) {
-    // Cleanup local + cloud
+    console.error("❌ Error uploading to CDN:", error.message);
     req.files.forEach((f) => fs.existsSync(f.path) && fs.unlinkSync(f.path));
-    for (const pdf of uploadedPdfs) {
-      await deletePdfFromCloudinary(pdf.url, "materials", "raw");
-    }
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Error uploading PDFs",
-    });
+    return res
+      .status(500)
+      .json({ success: false, message: "Error uploading PDFs to CDN" });
   }
 
-  // Save material with multiple PDFs
+  // Save material
   const material = await Material.create({
     title: title.trim(),
-    pdfs: uploadedPdfs, // store array
+    pdfs: uploadedPdfs, // 👈 matches your existing schema
     price: price.trim(),
     forCourses: parsedCourses,
     accessControl: accessControl || "restricted",
   });
 
-  if (!material) {
-    for (const pdf of uploadedPdfs) {
-      await deletePdfFromCloudinary(pdf.url, "materials", "raw");
-    }
-    return res.status(500).json({
-      success: false,
-      message: "Error creating material",
-    });
-  }
-
-  // If courses were provided, link them
+  // If courses provided, link them
   if (parsedCourses.length > 0) {
     const courses = await Course.find({ _id: { $in: parsedCourses } });
     if (courses.length > 0) {

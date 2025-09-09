@@ -21,7 +21,7 @@ import studentRouter from "./routes/student.route.js";
 
 // App setup
 const app = express();
-const httpServer = createServer(app); 
+const httpServer = createServer(app);
 
 // CORS setup
 const allowedOrigins = CORS_ORIGIN;
@@ -82,7 +82,6 @@ io.use(async (socket, next) => {
 // Socket.IO logic
 io.on("connection", (socket) => {
   const studentName = socket.student.fullName;
-  console.log(`🟢 ${studentName} connected (ID: ${socket.id})`);
 
   socket.on("join class", async (classId) => {
     if (!mongoose.Types.ObjectId.isValid(classId)) {
@@ -90,7 +89,6 @@ io.on("connection", (socket) => {
     }
 
     socket.join(classId);
-    console.log(`📚 ${studentName} joined class: ${classId}`);
 
     try {
       const messages = await Message.find({ classId })
@@ -132,9 +130,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("disconnect", () => {
-    console.log(`🔴 ${studentName} disconnected (ID: ${socket.id})`);
-  });
+  socket.on("disconnect", () => {});
 });
 
 // API Routes

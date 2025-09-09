@@ -6,6 +6,8 @@ dotenv.config({
   path: "./.env",
 });
 
+httpServer.timeout = 10 * 60 * 1000;
+
 connectDb()
   .then(() => {
     app.on("error", (err) => {
