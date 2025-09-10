@@ -1,5 +1,5 @@
+import archiver from "archiver";
 import axios from "axios";
-import { v2 as cloudinary } from "cloudinary";
 import { mongoose } from "mongoose";
 import { Blog } from "../models/Blog.model.js";
 import { Course } from "../models/course.model.js";
@@ -343,10 +343,48 @@ const getBlog = asyncHandler(async (req, res) => {
   });
 });
 
-//materials
-const streamMaterial = asyncHandler(async (req, res, next) => {
+// //materials
+// const streamMaterial = asyncHandler(async (req, res, next) => {
+//   const { id } = req.params;
+//   const userId = req.student?._id;
+
+//   const material = await Material.findById(id);
+
+//   if (!material) {
+//     return res.status(404).json({
+//       success: false,
+//       message: "Material not found",
+//     });
+//   }
+
+//   // Generate a signed URL with short expiration
+//   const signedUrl = cloudinary.utils.private_download_url(
+//     material.publicId,
+//     "pdf",
+//     {
+//       resource_type: "raw",
+//       expires_at: Math.floor(Date.now() / 1000) + 60, // Expires in 60 seconds
+//       attachment: false, // Prevent download
+//     }
+//   );
+
+//   try {
+//     const response = await axios.get(signedUrl, { responseType: "stream" });
+//     res.setHeader("Content-Type", "application/pdf");
+//     res.setHeader("Content-Disposition", "inline; filename=material.pdf");
+//     console.log(response);
+//     response.data.pipe(res);
+//   } catch (error) {
+//     console.error("Error streaming PDF:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Error streaming PDF",
+//     });
+//   }
+// });
+
+const streamMaterial = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const userId = req.student?._id;
 
   const material = await Material.findById(id);
 
@@ -357,28 +395,63 @@ const streamMaterial = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Generate a signed URL with short expiration
-  const signedUrl = cloudinary.utils.private_download_url(
-    material.publicId,
-    "pdf",
-    {
-      resource_type: "raw",
-      expires_at: Math.floor(Date.now() / 1000) + 60, // Expires in 60 seconds
-      attachment: false, // Prevent download
-    }
-  );
+  if (!material.pdfs || material.pdfs.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: "No PDF files found for this material",
+    });
+  }
 
+  // If only 1 PDF → stream directly
+  if (material.pdfs.length === 1) {
+    const fileUrl = material.pdfs[0].url;
+    try {
+      console.log("📥 Fetching from CDN:", fileUrl);
+
+      const response = await axios.get(fileUrl, { responseType: "stream" });
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename=${material.title}.pdf`
+      );
+
+      response.data.pipe(res);
+    } catch (error) {
+      console.error("❌ Error streaming single PDF:", error.message);
+      return res.status(500).json({
+        success: false,
+        message: "Error streaming PDF",
+      });
+    }
+    return;
+  }
+
+  // If multiple PDFs → send as ZIP
   try {
-    const response = await axios.get(signedUrl, { responseType: "stream" });
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "inline; filename=material.pdf");
-    console.log(response);
-    response.data.pipe(res);
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=${material.title.replace(/\s+/g, "_")}_pdfs.zip`
+    );
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.pipe(res);
+
+    for (let i = 0; i < material.pdfs.length; i++) {
+      const pdf = material.pdfs[i];
+      console.log(`📥 Adding to ZIP: ${pdf.url}`);
+
+      const response = await axios.get(pdf.url, { responseType: "stream" });
+      archive.append(response.data, { name: `file_${i + 1}.pdf` });
+    }
+
+    archive.finalize();
   } catch (error) {
-    console.error("Error streaming PDF:", error);
+    console.error("❌ Error zipping PDFs:", error.message);
     return res.status(500).json({
       success: false,
-      message: "Error streaming PDF",
+      message: "Error preparing PDFs",
     });
   }
 });
