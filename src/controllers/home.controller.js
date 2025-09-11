@@ -1,5 +1,3 @@
-import archiver from "archiver";
-import axios from "axios";
 import { mongoose } from "mongoose";
 import { Blog } from "../models/Blog.model.js";
 import { Course } from "../models/course.model.js";
@@ -402,58 +400,19 @@ const streamMaterial = asyncHandler(async (req, res) => {
     });
   }
 
-  // If only 1 PDF → stream directly
+  // If only 1 PDF → return the direct link
   if (material.pdfs.length === 1) {
-    const fileUrl = material.pdfs[0].url;
-    try {
-      console.log("📥 Fetching from CDN:", fileUrl);
-
-      const response = await axios.get(fileUrl, { responseType: "stream" });
-
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        `inline; filename=${material.title}.pdf`
-      );
-
-      response.data.pipe(res);
-    } catch (error) {
-      console.error("❌ Error streaming single PDF:", error.message);
-      return res.status(500).json({
-        success: false,
-        message: "Error streaming PDF",
-      });
-    }
-    return;
-  }
-
-  // If multiple PDFs → send as ZIP
-  try {
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=${material.title.replace(/\s+/g, "_")}_pdfs.zip`
-    );
-
-    const archive = archiver("zip", { zlib: { level: 9 } });
-    archive.pipe(res);
-
-    for (let i = 0; i < material.pdfs.length; i++) {
-      const pdf = material.pdfs[i];
-      console.log(`📥 Adding to ZIP: ${pdf.url}`);
-
-      const response = await axios.get(pdf.url, { responseType: "stream" });
-      archive.append(response.data, { name: `file_${i + 1}.pdf` });
-    }
-
-    archive.finalize();
-  } catch (error) {
-    console.error("❌ Error zipping PDFs:", error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Error preparing PDFs",
+    return res.json({
+      success: true,
+      url: material.pdfs[0].url,
     });
   }
+
+  // If multiple PDFs → return all links
+  return res.json({
+    success: true,
+    urls: material.pdfs.map((pdf) => pdf.url),
+  });
 });
 
 //material payment
