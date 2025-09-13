@@ -1,5 +1,24 @@
 import mongoose, { Schema } from "mongoose";
 
+// Sub-schema for lesson contents
+const contentSchema = new Schema({
+  name: { type: String, required: true },
+  type: { type: String, required: true },
+  link: { type: String, required: true },
+  requiredForNext: { type: Boolean, default: false },
+  description: { type: String, required: true },
+});
+
+// Sub-schema for lessons
+const lessonSchema = new Schema({
+  name: { type: String, required: true },
+  description: { type: String, required: true },
+  type: { type: String, required: true },
+  requiredForNext: { type: Boolean, default: false },
+  contents: { type: [contentSchema], default: [] },
+});
+
+// Main course schema
 const courseSchema = new Schema(
   {
     id: {
@@ -58,7 +77,7 @@ const courseSchema = new Schema(
     type: {
       type: String,
       required: false,
-      default: ""
+      default: "",
     },
     studentsEnrolled: {
       type: Number,
@@ -87,12 +106,16 @@ const courseSchema = new Schema(
     materials: {
       type: [mongoose.Types.ObjectId],
       ref: "Material",
-      required: false,
-      default: []
-    }
+      default: [],
+    },
+    lessons: {
+      type: [lessonSchema],
+      default: [],
+    },
   },
   { timestamps: true }
 );
 
+// Exporting the model
 export const Course =
   mongoose.models.Course || mongoose.model("Course", courseSchema);
