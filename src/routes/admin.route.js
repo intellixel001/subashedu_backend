@@ -35,6 +35,7 @@ import {
   getNotification,
   getPendingPayments,
   getRoundedChartData,
+  getSingleCourse,
   getStaffs,
   getStudents,
   loginAdmin,
@@ -51,6 +52,12 @@ import {
 } from "../controllers/admin.controller.js";
 import { upload } from "../middlewares/multer.js";
 import { uploadPdf } from "../middlewares/multerPDF.js";
+import {
+  addContentController,
+  createLessonController,
+  deleteContentController,
+  updateContentController,
+} from "../modules/course.js";
 import { verifyAdminJwt } from "./../middlewares/verifyAdminJwt.js";
 
 const router = Router();
@@ -81,6 +88,21 @@ router.route("/delete-student").post(verifyAdminJwt, deleteStudent);
 
 // Course and Class routes
 router.route("/get-courses").get(verifyAdminJwt, getCourses);
+router.route("/courses/:id").get(verifyAdminJwt, getSingleCourse);
+router
+  .route("/courses/:id/lessons")
+  .post(verifyAdminJwt, createLessonController);
+router
+  .route("/courses/:courseId/lessons/:lessonId/contents")
+  .post(verifyAdminJwt, addContentController);
+router
+  .route("/courses/:courseId/lessons/:lessonId/contents/:contentId")
+  .put(verifyAdminJwt, updateContentController);
+
+// Delete content
+router
+  .route("/courses/:courseId/lessons/:lessonId/contents/:contentId")
+  .delete(verifyAdminJwt, deleteContentController);
 router.route("/get-classes").get(verifyAdminJwt, getClasses);
 router.route("/delete-class").post(verifyAdminJwt, deleteClass);
 router.route("/stop-live-class").post(verifyAdminJwt, stopLiveClass);

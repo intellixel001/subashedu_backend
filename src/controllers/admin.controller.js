@@ -839,6 +839,31 @@ const getCourses = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Course functions
+const getSingleCourse = asyncHandler(async (req, res, next) => {
+  try {
+    const course = await Course.findById(req.params?.id);
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: course,
+    });
+  } catch (error) {
+    // Invalid ObjectId or DB error
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Server error",
+    });
+  }
+});
+
 const createCourse = asyncHandler(async (req, res, next) => {
   if (!req.files || !req.files.thumbnail) {
     return res.status(400).json({
@@ -3167,6 +3192,7 @@ export {
   getNotification,
   getPendingPayments,
   getRoundedChartData,
+  getSingleCourse,
   getStaffs,
   getStudents,
   loginAdmin,
