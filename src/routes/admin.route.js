@@ -56,7 +56,9 @@ import {
   addContentController,
   createLessonController,
   deleteContentController,
+  deleteLessonController,
   updateContentController,
+  updateLessonController,
 } from "../modules/course.js";
 import { verifyAdminJwt } from "./../middlewares/verifyAdminJwt.js";
 
@@ -95,9 +97,19 @@ router
 router
   .route("/courses/:courseId/lessons/:lessonId/contents")
   .post(verifyAdminJwt, addContentController);
+
+// Update a lesson
+router
+  .route("/courses/:courseId/lessons/:lessonId")
+  .put(verifyAdminJwt, updateLessonController);
+
 router
   .route("/courses/:courseId/lessons/:lessonId/contents/:contentId")
   .put(verifyAdminJwt, updateContentController);
+// Delete lesson
+router
+  .route("/courses/:courseId/lessons/:lessonId")
+  .delete(verifyAdminJwt, deleteLessonController);
 
 // Delete content
 router

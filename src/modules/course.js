@@ -137,13 +137,70 @@ export const deleteContentController = asyncHandler(async (req, res) => {
   );
 
   if (result.modifiedCount === 0) {
-    return res
-      .status(404)
-      .json({
-        success: false,
-        message: "Course, lesson, or content not found",
-      });
+    return res.status(404).json({
+      success: false,
+      message: "Course, lesson, or content not found",
+    });
   }
 
   res.json({ success: true, message: "Content deleted successfully" });
+});
+
+// Delete lesson using updateOne and $pull
+export const deleteLessonController = asyncHandler(async (req, res) => {
+  const { courseId, lessonId } = req.params;
+
+  if (
+    !mongoose.Types.ObjectId.isValid(courseId) ||
+    !mongoose.Types.ObjectId.isValid(lessonId)
+  ) {
+    return res.status(400).json({ success: false, message: "Invalid IDs" });
+  }
+
+  const result = await Course.updateOne(
+    { _id: courseId },
+    { $pull: { lessons: { _id: lessonId } } }
+  );
+
+  if (result.modifiedCount === 0) {
+    return res.status(404).json({
+      success: false,
+      message: "Course or lesson not found",
+    });
+  }
+
+  res.json({ success: true, message: "Lesson deleted successfully" });
+});
+
+// --- Update a lesson using updateOne ---
+export const updateLessonController = asyncHandler(async (req, res) => {
+  const { courseId, lessonId } = req.params;
+  const updateData = req.body;
+
+  if (
+    !mongoose.Types.ObjectId.isValid(courseId) ||
+    !mongoose.Types.ObjectId.isValid(lessonId)
+  ) {
+    return res.status(400).json({ success: false, message: "Invalid IDs" });
+  }
+
+  const result = await Course.updateOne(
+    { _id: courseId, "lessons._id": lessonId },
+    {
+      $set: Object.fromEntries(
+        Object.entries(updateData).map(([key, value]) => [
+          `lessons.$.${key}`,
+          value,
+        ])
+      ),
+    }
+  );
+
+  if (result.modifiedCount === 0) {
+    return res
+      .status(404)
+      .json({ success: false, message: "Course or lesson not found" });
+  }
+
+  res.json({ success: true, message: "Lesson updated successfully" });
 });
