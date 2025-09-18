@@ -1,6 +1,5 @@
 import axios from "axios";
 import fs from "fs";
-import { sendPaymentConfirmationEmail } from "../lib/sendPaymentConfirmMail.js";
 import { FreeClass } from "../models/freeClass.model.js";
 import { Material } from "../models/Material.model.js";
 import { Notification } from "../models/notification.model.js";
@@ -1992,35 +1991,45 @@ const stopLiveClass = asyncHandler(async (req, res, next) => {
 // Get pending payments
 const getPendingPayments = asyncHandler(async (req, res, next) => {
   try {
-    const payments = await Payment.find({ status: "pending" })
-      .populate("studentId", "fullName email registrationNumber")
-      .populate("courseId", "title price offer_price thumbnailUrl courseFor");
+    // Find all pending enrollments
+    const enrollments = await EnrollCourse.find({ status: "pending" });
+
+    const data = await Promise.all(
+      enrollments.map(async (enroll) => {
+        // Get student info
+        const student = await Student.findById(enroll.userid);
+        // Get course info (use first course in enrollcourse array)
+        const courseId = enroll.id;
+        const course = await Course.findById(courseId);
+
+        return {
+          _id: enroll._id,
+          studentId: student?._id,
+          courseId: course?._id,
+          student: {
+            fullName: student?.fullName || "",
+            email: student?.email || "",
+            registrationNumber: student?.registrationNumber || "",
+          },
+          course: {
+            title: course?.title || "",
+            price: course?.price || 0,
+            thumbnailUrl: course?.thumbnailUrl || "",
+            courseFor: course?.courseFor || "",
+            offer_price: course?.offer_price || 0,
+          },
+          paymentMethod: enroll.paymentMethod || "",
+          transactionId: enroll.tranjectionid || "",
+          status: enroll.status,
+          createdAt: enroll.createdAt,
+        };
+      })
+    );
+
     return res.status(200).json({
       success: true,
-      data: payments.map((payment) => ({
-        _id: payment._id,
-        studentId: payment.studentId._id,
-        courseId: payment.courseId._id,
-        student: {
-          fullName: payment.studentId.fullName,
-          email: payment.studentId.email,
-          registrationNumber: payment.studentId.registrationNumber,
-        },
-        course: {
-          title: payment.courseId.title,
-          price: payment.courseId.price,
-          thumbnailUrl: payment.courseId.thumbnailUrl,
-          courseFor: payment.courseId.courseFor,
-          offer_price: payment.courseId.offer_price,
-        },
-        paymentMethod: payment.paymentMethod,
-        mobileNumber: payment.mobileNumber,
-        transactionId: payment.transactionId,
-        amount: payment.amount,
-        status: payment.status,
-        createdAt: payment.createdAt,
-      })),
-      message: payments.length === 0 ? "No pending payments found" : undefined,
+      data,
+      message: data.length === 0 ? "No pending payments found" : undefined,
     });
   } catch (error) {
     console.error("Error fetching pending payments:", error);
@@ -2043,89 +2052,36 @@ const verifyPayment = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const payment = await Payment.findById(paymentId);
-  if (!payment) {
-    return res.status(404).json({
-      success: false,
-      message: "Payment not found",
-    });
-  }
-
-  if (payment.status !== "pending") {
-    return res.status(400).json({
-      success: false,
-      message: "Payment is not in pending status",
-    });
-  }
-
-  const student = await Student.findById(studentId);
-  if (!student) {
-    return res.status(404).json({
-      success: false,
-      message: "Student not found",
-    });
-  }
-
-  const course = await Course.findById(courseId);
-  if (!course) {
-    return res.status(404).json({
-      success: false,
-      message: "Course not found",
-    });
-  }
-
-  // Check if student is already enrolled
-  const isAlreadyEnrolled = student.coursesEnrolled.some(
-    (course) => course.toString() === courseId
+  // Update payment status to approved if it is pending
+  const paymentUpdate = await EnrollCourse.updateOne(
+    { _id: paymentId, status: "pending" },
+    { $set: { status: "approved" } }
   );
-  if (isAlreadyEnrolled) {
+
+  if (paymentUpdate.modifiedCount === 0) {
     return res.status(400).json({
       success: false,
-      message: "Student is already enrolled in this course",
+      message: "Payment not found or already approved",
     });
   }
 
-  // Update payment status
-  payment.status = "verified";
-  await payment.save();
+  // Increment studentsEnrolled in course
+  await Course.updateOne({ _id: courseId }, { $inc: { studentsEnrolled: 1 } });
 
-  // Add course to student's coursesEnrolled
-  student.coursesEnrolled.push(courseId);
-  await student.save({ validateBeforeSave: false });
-
-  // Optionally, increment studentsEnrolled in course
-  course.studentsEnrolled += 1;
-  await course.save({ validateBeforeSave: false });
-
-  // Sending payment verification email to student
-  const paymentDetails = {
-    transactionId: payment.transactionId,
-    amount: payment.amount,
-    paymentMethod: payment.paymentMethod,
-    createdAt: payment.createdAt,
-    studentName: student.fullName,
-    courseTitle: course.title,
-  };
-
-  const emailResult = await sendPaymentConfirmationEmail({
-    studentEmail: student.email,
-    studentName: student.fullName,
-    courseTitle: course.title,
-    paymentDetails,
-  });
-
-  if (!emailResult.success) {
-    console.error("Email sending failed:", emailResult.error);
-    // Note: Not throwing error to avoid rolling back the payment verification
-  }
+  // Add courseId to student's coursesEnrolled array if not already present
+  await Student.updateOne(
+    { _id: studentId },
+    { $addToSet: { coursesEnrolled: courseId } }
+  );
 
   return res.status(200).json({
     success: true,
-    message: "Payment verified successfully",
+    message: "Payment verified and enrollment updated successfully",
     data: {
-      paymentId: payment._id,
-      studentId: student._id,
-      courseId: course._id,
+      paymentId,
+      studentId,
+      courseId,
+      status: "approved",
     },
   });
 });
@@ -2141,7 +2097,7 @@ const deletePayment = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const payment = await Payment.findById(paymentId);
+  const payment = await EnrollCourse.findById(paymentId);
   if (!payment) {
     return res.status(404).json({
       success: false,
@@ -2149,7 +2105,7 @@ const deletePayment = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const deletedPayment = await Payment.findByIdAndDelete(paymentId);
+  const deletedPayment = await EnrollCourse.findByIdAndDelete(paymentId);
   if (!deletedPayment) {
     return res.status(500).json({
       success: false,
@@ -2740,6 +2696,7 @@ const deleteBlog = asyncHandler(async (req, res) => {
 // })
 
 import FormData from "form-data";
+import { EnrollCourse } from "../models/enrolledcourse.model.js";
 
 const CDN_API = "https://cdn.adletica.com/upload";
 

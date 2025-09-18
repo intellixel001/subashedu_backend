@@ -17,6 +17,7 @@ import {
   loginStudent,
   paymentRequest,
   paymentSubmit,
+  purchaseCourseController,
   refreshAccessToken,
   registerStudent,
   sendNotification,
@@ -33,6 +34,7 @@ router.route("/current-student").get(verifyJwt, currentStudent);
 router.route("/refresh-accesstoken").post(refreshAccessToken);
 router.route("/payment-submit").post(verifyJwt, paymentSubmit);
 router.route("/payment-request").post(verifyJwt, paymentRequest);
+router.route("/course/purchase/:id").post(verifyJwt, purchaseCourseController);
 
 router.route("/live-classes").post(verifyJwt, getLiveClasses);
 router.route("/class/:classId").get(verifyJwt, getClassById);
@@ -63,7 +65,5 @@ router
   .post(verifyJwt, submitMaterialPayment);
 
 router.route("/get-student-materials").get(verifyJwt, getStudentMaterials);
-
-
 
 export default router;

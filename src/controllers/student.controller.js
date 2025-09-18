@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { Course } from "../models/course.model.js";
+import { EnrollCourse } from "../models/enrolledcourse.model.js";
 import { FreeClass } from "../models/freeClass.model.js";
 import { Payment } from "../models/payment.model.js";
 import { Student } from "../models/student.model.js";
@@ -442,6 +443,64 @@ const paymentRequest = asyncHandler(async (req, res, next) => {
   );
 });
 
+const purchaseCourseController = asyncHandler(async (req, res, next) => {
+  const { id: courseId } = req.params;
+  const { paymentMethod, transactionId } = req.body;
+
+  // get student from auth middleware
+  const student = req?.student;
+  if (!student) {
+    throw new ApiError(401, "Unauthorized");
+  }
+
+  // find course
+  const course = await Course.findById(courseId);
+  if (!course) {
+    throw new ApiError(404, "Course not found");
+  }
+
+  // Check if student already enrolled in this course
+  const alreadyEnrolled = await EnrollCourse.findOne({
+    userid: student._id.toString(),
+    id: course._id.toString(),
+  });
+
+  if (alreadyEnrolled) {
+    return res
+      .status(400)
+      .json(
+        new ApiResponse(
+          400,
+          "You have already purchased/enrolled in this course"
+        )
+      );
+  }
+
+  // Map lessons with status
+  const lessonsArray = course.lessons.map((lesson) => ({
+    name: lesson.name,
+    _id: lesson._id,
+    coursestatus: "not-started",
+  }));
+
+  // Create enroll doc
+  const enrollData = await EnrollCourse.create({
+    id: course._id.toString(),
+    userid: student._id.toString(),
+    tranjectionid: transactionId,
+    type: course.offer_price > 0 ? "paid" : "free",
+    paymentMethod,
+    status: "pending",
+    enrollcourse: lessonsArray,
+  });
+
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(201, "Course purchase request submitted", enrollData)
+    );
+});
+
 const getLiveClasses = asyncHandler(async (req, res, next) => {
   const { _id: studentId } = req.student;
 
@@ -529,19 +588,37 @@ const getClassById = asyncHandler(async (req, res, next) => {
 const getMyCourses = asyncHandler(async (req, res, next) => {
   const { _id: studentId } = req.student;
 
-  const student = await Student.findById(studentId)
-    .populate("coursesEnrolled")
-    .select("-password -refreshToken");
+  // Find enrollments and populate course info
+  const enrollments = await EnrollCourse.find({ userid: studentId })
+    .lean()
+    .populate({
+      path: "id",
+      model: Course,
+      select:
+        "title short_description subjects thumbnailUrl instructors offer_price price courseFor",
+    });
 
-  if (!student) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Could not find student." });
+  if (!enrollments || enrollments.length === 0) {
+    return res.status(200).json({
+      success: true,
+      data: [],
+      message: "No enrolled courses found.",
+    });
   }
+
+  // Map enrollments to include course info
+  const data = enrollments.map((enroll) => ({
+    _id: enroll._id,
+    status: enroll.status,
+    paymentMethod: enroll.paymentMethod,
+    transactionId: enroll.tranjectionid,
+    course: enroll.id,
+    createdAt: enroll.createdAt,
+  }));
 
   return res.status(200).json({
     success: true,
-    data: student,
+    data,
     message: "Fetched successfully!",
   });
 });
@@ -939,30 +1016,42 @@ const submitMaterialPayment = asyncHandler(async (req, res, next) => {
 const getStudentMaterials = asyncHandler(async (req, res, next) => {
   const studentId = req.student?._id;
   if (!studentId) {
-    return res.status(404).json({ success: false, message: "student not found" });
+    return res
+      .status(404)
+      .json({ success: false, message: "student not found" });
   }
 
   const [directMaterialsData, enrolledCoursesData] = await Promise.all([
-    Student.findById(studentId).populate("materials", "title forCourses price createdAt"),
+    Student.findById(studentId).populate(
+      "materials",
+      "title forCourses price createdAt"
+    ),
     Student.findById(studentId).populate({
       path: "coursesEnrolled",
-      populate: { path: "materials", select: "title forCourses price createdAt" },
+      populate: {
+        path: "materials",
+        select: "title forCourses price createdAt",
+      },
     }),
   ]);
 
   if (!directMaterialsData) {
-    return res.status(404).json({ success: false, message: "student not found again lol" });
+    return res
+      .status(404)
+      .json({ success: false, message: "student not found again lol" });
   }
 
   const directMaterials = directMaterialsData.materials || [];
-  const enrolledMaterials = (enrolledCoursesData?.coursesEnrolled || []).flatMap(course =>
+  const enrolledMaterials = (
+    enrolledCoursesData?.coursesEnrolled || []
+  ).flatMap((course) =>
     Array.isArray(course.materials) ? course.materials : []
   );
 
   const combined = [...directMaterials, ...enrolledMaterials];
 
   const uniqueSortedMaterials = Array.from(
-    new Map(combined.map(mat => [String(mat._id), mat])).values()
+    new Map(combined.map((mat) => [String(mat._id), mat])).values()
   ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   return res.status(200).json({
@@ -990,6 +1079,7 @@ export {
   loginStudent,
   paymentRequest,
   paymentSubmit,
+  purchaseCourseController,
   refreshAccessToken,
   registerStudent,
   sendNotification,

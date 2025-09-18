@@ -139,7 +139,10 @@ const getCourse = asyncHandler(async (req, res, next) => {
 });
 
 const getAllCourse = asyncHandler(async (req, res, next) => {
-  const allCourse = await Course.find({}).select("-description");
+  const allCourse = await Course.find({}).select(
+    "id title short_description price offer_price thumbnailUrl subjects tags instructors studentsEnrolled courseFor type"
+  );
+
   if (!allCourse || allCourse.length === 0) {
     return res
       .status(404)
@@ -149,6 +152,26 @@ const getAllCourse = asyncHandler(async (req, res, next) => {
   return res
     .status(200)
     .json({ success: true, data: allCourse, message: "Fetch successful" });
+});
+
+const getSingleCourse = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  const course = await Course.findOne({ _id: id }).select(
+    "id title short_description price offer_price thumbnailUrl subjects tags instructors studentsEnrolled courseFor type"
+  );
+
+  console.log({ course });
+
+  if (!course) {
+    return res
+      .status(404)
+      .json({ success: false, message: "Course not found." });
+  }
+
+  return res
+    .status(200)
+    .json({ success: true, data: course, message: "Fetch successful" });
 });
 
 const getCoursesByCategory = asyncHandler(async (req, res, next) => {
@@ -461,6 +484,7 @@ export {
   getMaterialForPurchase,
   getMaterials,
   getNotice,
+  getSingleCourse,
   homeController,
   searchCourses,
   streamMaterial,

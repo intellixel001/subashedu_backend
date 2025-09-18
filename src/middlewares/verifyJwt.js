@@ -16,9 +16,9 @@ export const verifyJwt = asyncHandler(async (req, res, next) => {
     }
 
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    const student = await Student.findById(decodedToken?.id).select(
-      "-password -refreshToken"
-    ).populate("coursesEnrolled"); 
+    const student = await Student.findById(decodedToken?.id)
+      .select("-password -refreshToken")
+      .populate("coursesEnrolled");
 
     if (!student) {
       return res.status(400).json({

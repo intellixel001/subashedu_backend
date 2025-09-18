@@ -97,12 +97,11 @@ const studentSchema = new Schema(
       required: false,
       default: [],
     },
-    coursesEnrolled: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Course",
-      },
-    ],
+    coursesEnrolled: {
+      type: Array,
+      required: false,
+      default: [],
+    },
     // Account Security
     password: {
       type: String,

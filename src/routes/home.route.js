@@ -10,6 +10,7 @@ import {
   getMaterialForPurchase,
   getMaterials,
   getNotice,
+  getSingleCourse,
   homeController,
   searchCourses,
   streamMaterial,
@@ -22,6 +23,7 @@ router.route("").get(homeController);
 router.route("/get-homepage-data").get(getHomePageData);
 router.route("/course/:id").get(getCourse);
 router.route("/get-all-course").get(getAllCourse);
+router.route("/get-single-course/:id").get(getSingleCourse);
 router.route("/courses/:category").get(getCoursesByCategory);
 router.route("/notice").get(getNotice);
 router.route("/free-classes").get(getFreeClasses);
