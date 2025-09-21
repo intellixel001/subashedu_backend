@@ -24,6 +24,10 @@ import {
   submitMaterialPayment,
   updateNotificationReadStatus,
 } from "../controllers/student.controller.js";
+import {
+  getMyEnrolledCourse,
+  getMySinglematerial,
+} from "../modules/student.course.js";
 import { verifyJwt } from "./../middlewares/verifyJwt.js";
 
 const router = Router();
@@ -65,5 +69,7 @@ router
   .post(verifyJwt, submitMaterialPayment);
 
 router.route("/get-student-materials").get(verifyJwt, getStudentMaterials);
+router.route("/get-enrolled-course/:id").get(verifyJwt, getMyEnrolledCourse);
+router.route("/get-mysingle-material/:id").get(verifyJwt, getMySinglematerial);
 
 export default router;

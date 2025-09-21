@@ -158,7 +158,7 @@ const getSingleCourse = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
   const course = await Course.findOne({ _id: id }).select(
-    "id title short_description price offer_price thumbnailUrl subjects tags instructors studentsEnrolled courseFor type"
+    "id title short_description description price offer_price thumbnailUrl subjects tags instructors studentsEnrolled courseFor type"
   );
 
   console.log({ course });

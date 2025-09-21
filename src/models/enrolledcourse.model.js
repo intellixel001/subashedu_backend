@@ -10,6 +10,11 @@ const EnrollCourseSchema = new Schema(
       type: String,
       required: true,
     },
+    materials: {
+      type: [mongoose.Types.ObjectId],
+      ref: "Material",
+      default: [],
+    },
     tranjectionid: {
       type: String,
       required: true,

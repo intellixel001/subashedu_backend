@@ -480,7 +480,7 @@ const purchaseCourseController = asyncHandler(async (req, res, next) => {
   const lessonsArray = course.lessons.map((lesson) => ({
     name: lesson.name,
     _id: lesson._id,
-    coursestatus: "not-started",
+    status: "locked",
   }));
 
   // Create enroll doc
@@ -488,6 +488,7 @@ const purchaseCourseController = asyncHandler(async (req, res, next) => {
     id: course._id.toString(),
     userid: student._id.toString(),
     tranjectionid: transactionId,
+    materials: course.materials || [],
     type: course.offer_price > 0 ? "paid" : "free",
     paymentMethod,
     status: "pending",

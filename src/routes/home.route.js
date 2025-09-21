@@ -13,9 +13,7 @@ import {
   getSingleCourse,
   homeController,
   searchCourses,
-  streamMaterial,
 } from "../controllers/home.controller.js";
-import { verifyJwt } from "./../middlewares/verifyJwt.js";
 
 const router = Router();
 
@@ -32,7 +30,7 @@ router.route("/get-blogs").get(getBlogs);
 router.route("/blog/:id").get(getBlog);
 
 //material
-router.route("/stream-material/:id").get(verifyJwt, streamMaterial);
+// router.route("/stream-material/:id").get(verifyJwt, streamMaterial);
 router.route("/get-material-for-purchase/:id").get(getMaterialForPurchase);
 router.route("/get-materials").get(getMaterials);
 
