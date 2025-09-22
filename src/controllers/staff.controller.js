@@ -13,13 +13,13 @@ import {
   deletePdfFromCloudinary,
   uploadPdfOnCloudinary,
 } from "../utils/cloudinaryPDFUploader.js";
-import { MaterialPayment } from "./../models/MaterialPayment.model.js";
 import {
   deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/uploadOnCloudinary.js";
 import { Blog } from "./../models/Blog.model.js";
 import { FreeClass } from "./../models/freeClass.model.js";
+import { MaterialPayment } from "./../models/MaterialPayment.model.js";
 import { Notice } from "./../models/notice.model.js";
 
 const generateAccessAndRefreshToken = async (staffId) => {
@@ -1510,8 +1510,6 @@ const createLiveClass = asyncHandler(async (req, res, next) => {
 // Create recorded class
 const createRecordedClass = asyncHandler(async (req, res, next) => {
   // Log req.body and req.file for debugging
-  console.log("createRecordedClass req.body:", req.body);
-  console.log("createRecordedClass req.file:", req.file);
 
   const { title, subject, instructor, courseId } = req.body;
 
@@ -1653,7 +1651,6 @@ const deleteClass = asyncHandler(async (req, res, next) => {
       (classId) => classId.toString() !== _id
     );
     if (course.classes.length < initialLength) {
-      console.log(`Removed class ${_id} from course ${course._id}`);
       await course.save({ validateBeforeSave: false });
     } else {
       console.warn(
@@ -1672,7 +1669,6 @@ const deleteClass = asyncHandler(async (req, res, next) => {
     });
   }
 
-  console.log(`Class ${_id} deleted successfully`);
   return res.status(200).json({
     success: true,
     message: "Class deleted successfully",

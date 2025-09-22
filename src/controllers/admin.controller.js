@@ -2769,15 +2769,11 @@ const createMaterial = asyncHandler(async (req, res) => {
     accessControl: accessControl || "restricted",
   });
 
-  // If courses provided, link them
   if (parsedCourses.length > 0) {
-    const courses = await Course.find({ _id: { $in: parsedCourses } });
-    if (courses.length > 0) {
-      for (const course of courses) {
-        course.materials.push(material._id);
-        await course.save({ validateBeforeSave: false });
-      }
-    }
+    await Course.updateMany(
+      { _id: { $in: parsedCourses } },
+      { $addToSet: { materials: material._id } }
+    );
   }
 
   return res.status(201).json({

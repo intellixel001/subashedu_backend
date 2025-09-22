@@ -29,15 +29,11 @@ const uploadOnCloudinary = async (localFilePath, folderName) => {
       resource_type: "auto",
     });
 
-    // console.log("File uploaded successfully: ", uploadResponse.url);
-
     // Remove from temp when successful
     fs.unlinkSync(localFilePath);
 
     return uploadResponse;
   } catch (error) {
-    console.log("Error uploading file: ", error);
-
     // Remove from temp when FAILED
     if (fs.existsSync(localFilePath)) {
       fs.unlinkSync(localFilePath);
@@ -50,7 +46,6 @@ const deleteFromCloudinary = async (imageUrl, folderName) => {
   try {
     const publicId = getPublicIdFromUrl(imageUrl);
     if (!publicId) {
-      console.log("No valid public ID found in URL");
       return false;
     }
 

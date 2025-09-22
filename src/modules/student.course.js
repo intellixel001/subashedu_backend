@@ -1,3 +1,4 @@
+import { Course } from "../models/course.model.js";
 import { EnrollCourse } from "../models/enrolledcourse.model.js";
 import { Material } from "../models/Material.model.js";
 import { Student } from "../models/student.model.js";
@@ -70,7 +71,7 @@ export const getMySinglematerial = async (req, res) => {
     }
 
     // Find student
-    const student = await Student.findOne({ _id: studentId }).lean();
+    const student = await Student.findById(studentId).lean();
     if (!student) {
       return res
         .status(404)
@@ -78,7 +79,7 @@ export const getMySinglematerial = async (req, res) => {
     }
 
     // 1️⃣ Check if material purchased directly
-    if (student.materials.some((m) => m.toString() === materialId)) {
+    if (student.materials?.some((m) => m.toString() === materialId)) {
       const material = await Material.findById(materialId).lean();
       return res.status(200).json({
         success: true,
@@ -88,20 +89,22 @@ export const getMySinglematerial = async (req, res) => {
       });
     }
 
-    // 2️⃣ Check all purchased courses
-    const purchasedCourses = await EnrollCourse.find({
-      userid: studentId,
+    // 2️⃣ Check all enrolled courses
+    const enrolledCourseDocs = await EnrollCourse.find({
+      _id: { $in: student.coursesEnrolled },
       status: "approved",
     }).lean();
 
-    let materialFoundInCourse = false;
+    // Get actual course IDs from enrolled courses
+    const courseIds = enrolledCourseDocs.map((c) => c.id); // `id` is the real course ID
+    const courses = await Course.find({ _id: { $in: courseIds } }).lean();
 
-    for (const course of purchasedCourses) {
-      if (course.materials?.includes(materialId)) {
-        materialFoundInCourse = true;
-        break;
-      }
-    }
+    // Check if material exists in any of the courses
+    const materialFoundInCourse = courses.some(
+      (course) =>
+        Array.isArray(course.materials) &&
+        course.materials.some((m) => m.toString() === materialId)
+    );
 
     if (!materialFoundInCourse) {
       return res.status(403).json({

@@ -161,8 +161,6 @@ const getSingleCourse = asyncHandler(async (req, res, next) => {
     "id title short_description description price offer_price thumbnailUrl subjects tags instructors studentsEnrolled courseFor type"
   );
 
-  console.log({ course });
-
   if (!course) {
     return res
       .status(404)
@@ -393,7 +391,6 @@ const getBlog = asyncHandler(async (req, res) => {
 //     const response = await axios.get(signedUrl, { responseType: "stream" });
 //     res.setHeader("Content-Type", "application/pdf");
 //     res.setHeader("Content-Disposition", "inline; filename=material.pdf");
-//     console.log(response);
 //     response.data.pipe(res);
 //   } catch (error) {
 //     console.error("Error streaming PDF:", error);

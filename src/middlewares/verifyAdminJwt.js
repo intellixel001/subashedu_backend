@@ -8,7 +8,6 @@ export const verifyAdminJwt = asyncHandler(async (req, res, next) => {
       req.cookies?.adminAccessToken ||
       req.header("Authorization")?.replace("Bearer ", "");
 
-
     if (!token) {
       return res.status(400).json({
         succes: false,
@@ -31,7 +30,6 @@ export const verifyAdminJwt = asyncHandler(async (req, res, next) => {
     req.admin = admin;
     next();
   } catch (error) {
-    console.log(error?.message);
     return res.status(500).json({
       succes: false,
       message: "Invalid access token",

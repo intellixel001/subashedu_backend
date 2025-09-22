@@ -30,7 +30,6 @@ export const verifyStaffJwt = asyncHandler(async (req, res, next) => {
     req.staff = staff;
     next();
   } catch (error) {
-    console.log(error?.message);
     return res.status(500).json({
       success: false,
       message: "Invalid access token",

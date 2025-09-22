@@ -19,8 +19,6 @@ const getPublicIdFromUrl = (url) => {
   return matches ? matches[1] : null;
 };
 
-
-
 const uploadPdfOnCloudinary = async (localFilePath, folderName) => {
   try {
     if (!localFilePath) return null;
@@ -35,7 +33,6 @@ const uploadPdfOnCloudinary = async (localFilePath, folderName) => {
     fs.unlinkSync(localFilePath);
     return uploadResponse;
   } catch (error) {
-    console.log("Error uploading PDF: ", error);
     if (fs.existsSync(localFilePath)) {
       fs.unlinkSync(localFilePath);
     }
@@ -43,11 +40,14 @@ const uploadPdfOnCloudinary = async (localFilePath, folderName) => {
   }
 };
 
-const deletePdfFromCloudinary = async (url, folderName, resourceType = "raw") => {
+const deletePdfFromCloudinary = async (
+  url,
+  folderName,
+  resourceType = "raw"
+) => {
   try {
     const publicId = getPublicIdFromUrl(url);
     if (!publicId) {
-      console.log("No valid public ID found in URL");
       return false;
     }
 

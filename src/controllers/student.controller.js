@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { Material } from "../models/Material.model.js";
 import { Course } from "../models/course.model.js";
 import { EnrollCourse } from "../models/enrolledcourse.model.js";
 import { FreeClass } from "../models/freeClass.model.js";
@@ -494,6 +495,11 @@ const purchaseCourseController = asyncHandler(async (req, res, next) => {
     status: "pending",
     enrollcourse: lessonsArray,
   });
+
+  await Student.updateOne(
+    { _id: student._id },
+    { $addToSet: { coursesEnrolled: enrollData._id } }
+  );
 
   return res
     .status(201)
@@ -1022,33 +1028,48 @@ const getStudentMaterials = asyncHandler(async (req, res, next) => {
       .json({ success: false, message: "student not found" });
   }
 
-  const [directMaterialsData, enrolledCoursesData] = await Promise.all([
-    Student.findById(studentId).populate(
-      "materials",
-      "title forCourses price createdAt"
-    ),
-    Student.findById(studentId).populate({
-      path: "coursesEnrolled",
-      populate: {
-        path: "materials",
-        select: "title forCourses price createdAt",
-      },
-    }),
-  ]);
+  // 1. Load student with direct materials
+  const student = await Student.findById(studentId).populate(
+    "materials",
+    "title forCourses price createdAt"
+  );
 
-  if (!directMaterialsData) {
+  if (!student) {
     return res
       .status(404)
       .json({ success: false, message: "student not found again lol" });
   }
 
-  const directMaterials = directMaterialsData.materials || [];
-  const enrolledMaterials = (
-    enrolledCoursesData?.coursesEnrolled || []
-  ).flatMap((course) =>
-    Array.isArray(course.materials) ? course.materials : []
+  const directMaterials = student.materials || [];
+
+  // 2. Get enrolled course references (EnrolledCourse IDs)
+  const enrolledCourseIds = (student.coursesEnrolled || []).map((id) =>
+    String(id)
   );
 
+  // 3. Load enrolled course docs
+  const enrolledCourses = await EnrollCourse.find({
+    _id: { $in: enrolledCourseIds },
+    status: "approved",
+  }).select("id");
+
+  // 4. Extract the real course IDs
+  const realCourseIds = enrolledCourses.map((e) => e.id);
+
+  // 5. Fetch courses with those IDs
+  const courses = await Course.find({ _id: { $in: realCourseIds } });
+
+  // 6. Collect all material ids
+  const enrolledMaterialIds = courses.flatMap((c) =>
+    Array.isArray(c.materials) ? c.materials : []
+  );
+
+  // 7. Fetch enrolled materials
+  const enrolledMaterials = await Material.find({
+    _id: { $in: enrolledMaterialIds },
+  }).select("title forCourses price createdAt");
+
+  // 8. Combine, dedupe, sort
   const combined = [...directMaterials, ...enrolledMaterials];
 
   const uniqueSortedMaterials = Array.from(
