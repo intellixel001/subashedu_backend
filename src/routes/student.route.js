@@ -25,6 +25,7 @@ import {
   updateNotificationReadStatus,
 } from "../controllers/student.controller.js";
 import {
+  getCourseContent,
   getMyEnrolledCourse,
   getMySinglematerial,
 } from "../modules/student.course.js";
@@ -71,5 +72,6 @@ router
 router.route("/get-student-materials").get(verifyJwt, getStudentMaterials);
 router.route("/get-enrolled-course/:id").get(verifyJwt, getMyEnrolledCourse);
 router.route("/get-mysingle-material/:id").get(verifyJwt, getMySinglematerial);
+router.route("/get-course-content").get(verifyJwt, getCourseContent);
 
 export default router;
