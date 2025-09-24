@@ -49,7 +49,6 @@ export const getMyEnrolledCourse = async (req, res) => {
 
     // ---------- SYNC LESSONS ----------
     const mainLessons = mainCourse.lessons || [];
-    console.log(mainCourse);
     const enrolledLessons = enrolledCourseData.enrollcourse || [];
 
     // convert enrolled lessons to map for quick lookup
