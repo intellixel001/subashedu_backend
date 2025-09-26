@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 import { Material } from "../models/Material.model.js";
 import { Course } from "../models/course.model.js";
 import { EnrollCourse } from "../models/enrolledcourse.model.js";
-import { FreeClass } from "../models/freeClass.model.js";
 import { Payment } from "../models/payment.model.js";
 import { Student } from "../models/student.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -892,45 +891,7 @@ const getSenders = asyncHandler(async (req, res, next) => {
 });
 
 //free courses
-// Updated getFreeClasses
-const getFreeClasses = asyncHandler(async function (req, res, next) {
-  const { name } = req.params;
 
-  if (!name) {
-    throw new ApiError(400, "Class category is required");
-  }
-
-  const classes = await FreeClass.find({ classFor: name }).sort({
-    createdAt: -1,
-  });
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        classes.length ? "Found free classes" : "No free classes available",
-        classes
-      )
-    );
-});
-
-// Updated getFreeClass
-const getFreeClass = asyncHandler(async function (req, res, next) {
-  const { id } = req.params; // Fix: Use req.params, not req.param
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new ApiError(400, "Invalid class ID");
-  }
-
-  const foundClass = await FreeClass.findById(id);
-
-  if (!foundClass) {
-    throw new ApiError(404, "Class not found");
-  }
-
-  return res.status(200).json(new ApiResponse(200, "Class found", foundClass));
-});
 const getMaterialPaymentStatus = asyncHandler(async (req, res, next) => {
   const { materialId } = req.params;
   const studentId = req.student?._id;
@@ -1090,8 +1051,6 @@ export {
   getClassById,
   getCourseClasses,
   getCourseClassesVideos,
-  getFreeClass,
-  getFreeClasses,
   getLiveClasses,
   getMaterialPaymentStatus,
   getMyCourses,

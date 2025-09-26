@@ -3,7 +3,6 @@ import { Blog } from "../models/Blog.model.js";
 import { Course } from "../models/course.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Class } from "./../models/Class.model.js";
-import { FreeClass } from "./../models/freeClass.model.js";
 import { Material } from "./../models/Material.model.js";
 import { Notice } from "./../models/notice.model.js";
 import { Staff } from "./../models/staff.model.js";
@@ -238,20 +237,6 @@ const getNotice = asyncHandler(async (req, res, next) => {
   });
 });
 
-const getFreeClasses = asyncHandler(async (req, res, next) => {
-  const freeClasses = await FreeClass.find().sort({ createdAt: -1 }).limit(6);
-
-  if (!freeClasses || freeClasses.length === 0) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Could not find free classes" });
-  }
-
-  return res
-    .status(200)
-    .json({ success: true, message: "Found free classes!", data: freeClasses });
-});
-
 const searchCourses = asyncHandler(async (req, res, next) => {
   const { query } = req.query;
 
@@ -476,7 +461,6 @@ export {
   getBlogs,
   getCourse,
   getCoursesByCategory,
-  getFreeClasses,
   getHomePageData,
   getMaterialForPurchase,
   getMaterials,

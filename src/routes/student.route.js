@@ -6,8 +6,6 @@ import {
   getClassById,
   getCourseClasses,
   getCourseClassesVideos,
-  getFreeClass,
-  getFreeClasses,
   getLiveClasses,
   getMaterialPaymentStatus,
   getMyCourses,
@@ -60,8 +58,6 @@ router.route("/clear-notifications").post(verifyJwt, clearNotifications);
 router.route("/send-notification").post(verifyJwt, sendNotification);
 router.route("/get-senders").get(verifyJwt, getSenders);
 
-router.route("/get-free-classes/:name").get(verifyJwt, getFreeClasses);
-router.route("/get-free-class/:id").get(verifyJwt, getFreeClass);
 router
   .route("/material-payment-status/:materialId")
   .get(verifyJwt, getMaterialPaymentStatus);

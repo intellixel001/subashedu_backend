@@ -3,7 +3,6 @@ import {
   clearNotifications,
   createBlog,
   createCourse,
-  createFreeClass,
   createLiveClass,
   createMaterial,
   createNotice,
@@ -14,7 +13,6 @@ import {
   deleteBlog,
   deleteClass,
   deleteCourse,
-  deleteFreeClass,
   deleteMaterial,
   deleteNotice,
   deleteNotification,
@@ -27,7 +25,6 @@ import {
   getClasses,
   getCourses,
   getCoursesForMaterials,
-  getFreeClasses,
   getMaterialPaymentRequests,
   getMaterials,
   getNotification,
@@ -50,7 +47,7 @@ import {
 } from "../controllers/staff.controller.js";
 import { upload } from "../middlewares/multer.js";
 import { verifyStaffJwt } from "../middlewares/verifyStaffJwt.js";
-import { uploadPdf } from './../middlewares/multerPDF.js';
+import { uploadPdf } from "./../middlewares/multerPDF.js";
 
 const router = Router();
 
@@ -116,17 +113,9 @@ router
   .route("/get-rounded-chart-data")
   .get(verifyStaffJwt, getRoundedChartData);
 
-// Free Class routes
-router
-  .route("/create-free-class")
-  .post(verifyStaffJwt, upload.none(), createFreeClass);
-router.route("/get-free-classes").get(verifyStaffJwt, getFreeClasses);
-router.route("/delete-free-class").post(verifyStaffJwt, deleteFreeClass);
-
 //notice
 router.route("/create-notice").post(verifyStaffJwt, createNotice);
 router.route("/delete-notice").post(verifyStaffJwt, deleteNotice);
-
 
 // Teacher routes
 router.route("/get-teachers").get(verifyStaffJwt, getTeachers);
@@ -137,7 +126,6 @@ router
   .route("/update-teacher")
   .post(verifyStaffJwt, upload.single("avatar"), updateTeacher);
 router.route("/delete-teacher").post(verifyStaffJwt, deleteTeacher);
-
 
 //blog post
 router.route("/create-blog").post(
@@ -159,7 +147,6 @@ router.route("/update-blog").post(
 );
 router.route("/delete-blog").post(verifyStaffJwt, deleteBlog);
 
-
 // Material routes
 router
   .route("/create-material")
@@ -178,9 +165,9 @@ router
 router
   .route("/delete-material-payment/:id")
   .post(verifyStaffJwt, deletePaymentMaterial);
-  
-  router.route("/get-courses-for-materials").get(verifyStaffJwt,getCoursesForMaterials)
 
-
+router
+  .route("/get-courses-for-materials")
+  .get(verifyStaffJwt, getCoursesForMaterials);
 
 export default router;

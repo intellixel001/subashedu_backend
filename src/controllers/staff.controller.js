@@ -18,7 +18,6 @@ import {
   uploadOnCloudinary,
 } from "../utils/uploadOnCloudinary.js";
 import { Blog } from "./../models/Blog.model.js";
-import { FreeClass } from "./../models/freeClass.model.js";
 import { MaterialPayment } from "./../models/MaterialPayment.model.js";
 import { Notice } from "./../models/notice.model.js";
 
@@ -1873,132 +1872,6 @@ const getRoundedChartData = asyncHandler(async (req, res, next) => {
   });
 });
 
-// Create Free Class
-const createFreeClass = asyncHandler(async (req, res, next) => {
-  const { _id, title, subject, instructor, classFor, videoLink } = req.body;
-
-  if (!title || !subject || !instructor || !classFor || !videoLink) {
-    return res.status(400).json({
-      success: false,
-      message: "All fields are required",
-    });
-  }
-
-  // Validate classFor
-  const validClassFor = ["hsc", "ssc", "job", "admission"];
-  if (!validClassFor.includes(classFor.toLowerCase())) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid class type. Must be 'hsc', 'ssc', 'admission' or 'job'",
-    });
-  }
-
-  let freeClass;
-  if (_id) {
-    // Update existing free class
-    freeClass = await FreeClass.findById(_id);
-    if (!freeClass) {
-      return res.status(404).json({
-        success: false,
-        message: "Free class not found",
-      });
-    }
-
-    freeClass.title = title.trim();
-    freeClass.subject = subject.trim();
-    freeClass.instructor = instructor.trim();
-    freeClass.classFor = classFor.toLowerCase();
-    freeClass.videoLink = videoLink.trim();
-    freeClass.updatedAt = new Date();
-
-    await freeClass.save();
-  } else {
-    // Create new free class
-    freeClass = new FreeClass({
-      title: title.trim(),
-      subject: subject.trim(),
-      instructor: instructor.trim(),
-      classFor: classFor.toLowerCase(),
-      videoLink: videoLink.trim(),
-      createdBy: req.staff?._id,
-    });
-
-    await freeClass.save();
-  }
-
-  return res.status(_id ? 200 : 201).json({
-    success: true,
-    message: _id
-      ? "Free class updated successfully"
-      : "Free class created successfully",
-    data: freeClass,
-  });
-});
-
-// Get Free Classes (with pagination)
-const getFreeClasses = asyncHandler(async (req, res, next) => {
-  const { page = 1, limit = 10 } = req.query;
-  const pageNumber = parseInt(page, 10);
-  const limitNumber = parseInt(limit, 10);
-
-  if (isNaN(pageNumber) || pageNumber < 1) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid page number",
-    });
-  }
-  if (isNaN(limitNumber) || limitNumber < 1) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid limit",
-    });
-  }
-
-  const skip = (pageNumber - 1) * limitNumber;
-
-  const [freeClasses, totalCount] = await Promise.all([
-    FreeClass.find()
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNumber)
-      .lean(),
-    FreeClass.countDocuments(),
-  ]);
-
-  const totalPages = Math.ceil(totalCount / limitNumber);
-
-  return res.status(200).json({
-    success: true,
-    message: "Free classes fetched successfully",
-    data: {
-      freeClasses,
-      totalPages,
-      currentPage: pageNumber,
-      totalCount,
-    },
-  });
-});
-
-// Delete Free Class
-const deleteFreeClass = asyncHandler(async (req, res, next) => {
-  const { _id } = req.body;
-
-  const freeClass = await FreeClass.findByIdAndDelete(_id);
-
-  if (!freeClass) {
-    return res.status(404).json({
-      success: false,
-      message: "Free class not found",
-    });
-  }
-
-  return res.status(200).json({
-    success: true,
-    message: "Free class deleted successfully",
-    data: null,
-  });
-});
-
 const createNotice = asyncHandler(async (req, res, next) => {
   const { content } = req.body;
 
@@ -2920,7 +2793,6 @@ export {
   clearNotifications,
   createBlog,
   createCourse,
-  createFreeClass,
   createLiveClass,
   createMaterial,
   createNotice,
@@ -2931,7 +2803,6 @@ export {
   deleteBlog,
   deleteClass,
   deleteCourse,
-  deleteFreeClass,
   deleteMaterial,
   deleteNotice,
   deleteNotification,
@@ -2944,7 +2815,6 @@ export {
   getClasses,
   getCourses,
   getCoursesForMaterials,
-  getFreeClasses,
   getMaterialPaymentRequests,
   getMaterials,
   getNotification,

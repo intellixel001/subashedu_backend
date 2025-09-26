@@ -5,7 +5,6 @@ import {
   getBlogs,
   getCourse,
   getCoursesByCategory,
-  getFreeClasses,
   getHomePageData,
   getMaterialForPurchase,
   getMaterials,
@@ -24,7 +23,6 @@ router.route("/get-all-course").get(getAllCourse);
 router.route("/get-single-course/:id").get(getSingleCourse);
 router.route("/courses/:category").get(getCoursesByCategory);
 router.route("/notice").get(getNotice);
-router.route("/free-classes").get(getFreeClasses);
 router.route("/search").get(searchCourses);
 router.route("/get-blogs").get(getBlogs);
 router.route("/blog/:id").get(getBlog);

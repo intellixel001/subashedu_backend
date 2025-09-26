@@ -1,6 +1,5 @@
 import axios from "axios";
 import fs from "fs";
-import { FreeClass } from "../models/freeClass.model.js";
 import { Material } from "../models/Material.model.js";
 import { Notification } from "../models/notification.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -1774,118 +1773,6 @@ const getClasses = asyncHandler(async (req, res, next) => {
   });
 });
 
-const createLiveClass = asyncHandler(async (req, res, next) => {
-  const { title, subject, instructor, courseId, videoLink } = req.body;
-
-  // Validate required fields
-  if (!title || !subject || !instructor || !courseId || !videoLink) {
-    return res.status(400).json({
-      success: false,
-      message: "All fields are required",
-    });
-  }
-
-  // Check if course exists
-  const course = await Course.findById(courseId);
-  if (!course) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid course ID",
-    });
-  }
-
-  // Create the class
-  const createdClass = await Class.create({
-    title,
-    instructor,
-    subject: subject.toLowerCase(),
-    videoLink,
-    course: courseId,
-    isActiveLive: true,
-  });
-
-  if (!createdClass) {
-    return res.status(500).json({
-      success: false,
-      message: "Error creating live class",
-    });
-  }
-
-  // Add class to course
-  course.classes.push(createdClass._id);
-  await course.save({ validateBeforeSave: false });
-
-  return res.status(201).json({
-    success: true,
-    message: "Live class created successfully",
-    data: createdClass,
-  });
-});
-
-const createRecordedClass = asyncHandler(async (req, res, next) => {
-  // Log req.body and req.file for debugging
-
-  const { title, subject, instructor, courseId } = req.body;
-
-  // Validate required fields
-  if (!title || !subject || !instructor || !courseId || !req.file) {
-    if (req.file) fs.unlinkSync(req.file.path);
-    return res.status(400).json({
-      success: false,
-      message: "Title, subject, instructor, courseId, and video are required",
-    });
-  }
-
-  // Check if course exists
-  const course = await Course.findById(courseId);
-  if (!course) {
-    if (req.file) fs.unlinkSync(req.file.path);
-    return res.status(400).json({
-      success: false,
-      message: "Invalid course ID",
-    });
-  }
-
-  // Upload video to Cloudinary
-  const videoLocalPath = req.file.path;
-  const uploadVideo = await uploadOnCloudinary(videoLocalPath, "class-videos");
-  if (!uploadVideo?.url) {
-    if (fs.existsSync(videoLocalPath)) fs.unlinkSync(videoLocalPath);
-    return res.status(500).json({
-      success: false,
-      message: "Error uploading video",
-    });
-  }
-
-  // Create the class
-  const createdClass = await Class.create({
-    title,
-    instructor,
-    subject: subject.toLowerCase(),
-    videoLink: uploadVideo.url,
-    course: courseId,
-    isActiveLive: false,
-  });
-
-  if (!createdClass) {
-    await deleteFromCloudinary(uploadVideo.url, "class-videos");
-    return res.status(500).json({
-      success: false,
-      message: "Error creating recorded class",
-    });
-  }
-
-  // Add class to course
-  course.classes.push(createdClass._id);
-  await course.save({ validateBeforeSave: false });
-
-  return res.status(201).json({
-    success: true,
-    message: "Recorded class created successfully",
-    data: createdClass,
-  });
-});
-
 const deleteClass = asyncHandler(async (req, res, next) => {
   const { _id } = req.body;
   if (!_id) {
@@ -2119,130 +2006,6 @@ const deletePayment = asyncHandler(async (req, res, next) => {
     data: {
       paymentId: deletedPayment._id,
     },
-  });
-});
-
-// Create Free Class
-const createFreeClass = asyncHandler(async (req, res, next) => {
-  const { _id, title, subject, instructor, classFor, videoLink } = req.body;
-
-  if (!title || !subject || !instructor || !classFor || !videoLink) {
-    return res.status(400).json({
-      success: false,
-      message: "All fields are required",
-    });
-  }
-
-  // Validate classFor
-  const validClassFor = ["hsc", "ssc", "job", "admission"];
-  if (!validClassFor.includes(classFor.toLowerCase())) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid class type. Must be 'hsc', 'ssc', 'admission' or 'job'",
-    });
-  }
-
-  let freeClass;
-  if (_id) {
-    // Update existing free class
-    freeClass = await FreeClass.findById(_id);
-    if (!freeClass) {
-      return res.status(404).json({
-        success: false,
-        message: "Free class not found",
-      });
-    }
-
-    freeClass.title = title.trim();
-    freeClass.subject = subject.trim();
-    freeClass.instructor = instructor.trim();
-    freeClass.classFor = classFor.toLowerCase();
-    freeClass.videoLink = videoLink.trim();
-    freeClass.updatedAt = new Date();
-
-    await freeClass.save();
-  } else {
-    // Create new free class
-    freeClass = await FreeClass.create({
-      title: title.trim(),
-      subject: subject.trim(),
-      instructor: instructor.trim(),
-      classFor: classFor.toLowerCase(),
-      videoLink: videoLink.trim(),
-      createdBy: req.admin?._id,
-    });
-  }
-
-  return res.status(_id ? 200 : 201).json({
-    success: true,
-    message: _id
-      ? "Free class updated successfully"
-      : "Free class created successfully",
-    data: freeClass,
-  });
-});
-
-// Get Free Classes (with pagination)
-const getFreeClasses = asyncHandler(async (req, res, next) => {
-  const { page = 1, limit = 10 } = req.query;
-  const pageNumber = parseInt(page, 10);
-  const limitNumber = parseInt(limit, 10);
-
-  if (isNaN(pageNumber) || pageNumber < 1) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid page number",
-    });
-  }
-  if (isNaN(limitNumber) || limitNumber < 1) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid limit",
-    });
-  }
-
-  const skip = (pageNumber - 1) * limitNumber;
-
-  const [freeClasses, totalCount] = await Promise.all([
-    FreeClass.find()
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNumber)
-      .lean(),
-    FreeClass.countDocuments(),
-  ]);
-
-  const totalPages = Math.ceil(totalCount / limitNumber);
-
-  return res.status(200).json({
-    success: true,
-    message: "Free classes fetched successfully",
-    data: {
-      freeClasses,
-      totalPages,
-      currentPage: pageNumber,
-      totalCount,
-    },
-  });
-});
-
-// Delete Free Class
-const deleteFreeClass = asyncHandler(async (req, res, next) => {
-  const { _id } = req.body;
-
-  const freeClass = await FreeClass.findByIdAndDelete(_id);
-
-  if (!freeClass) {
-    return res.status(404).json({
-      success: false,
-      message: "Free class not found",
-    });
-  }
-
-  return res.status(200).json({
-    success: true,
-    message: "Free class deleted successfully",
-    data: null,
   });
 });
 
@@ -3114,17 +2877,13 @@ export {
   createAdmin,
   createBlog,
   createCourse,
-  createFreeClass,
-  createLiveClass,
   createMaterial,
   createNotice,
-  createRecordedClass,
   createStaff,
   createStudent,
   deleteBlog,
   deleteClass,
   deleteCourse,
-  deleteFreeClass,
   deleteMaterial,
   deleteNotice,
   deleteNotification,
@@ -3137,7 +2896,6 @@ export {
   getClasses,
   getCourses,
   getCoursesForMaterials,
-  getFreeClasses,
   getInvoices,
   getMaterialPaymentRequests,
   getMaterials,

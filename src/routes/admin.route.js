@@ -4,17 +4,12 @@ import {
   createAdmin,
   createBlog,
   createCourse,
-  createFreeClass,
-  createLiveClass,
   createMaterial,
   createNotice,
-  createRecordedClass,
   createStaff,
   createStudent,
   deleteBlog,
-  deleteClass,
   deleteCourse,
-  deleteFreeClass,
   deleteMaterial,
   deleteNotice,
   deleteNotification,
@@ -24,10 +19,8 @@ import {
   deleteStudent,
   getAdmin,
   getBlogs,
-  getClasses,
   getCourses,
   getCoursesForMaterials,
-  getFreeClasses,
   getInvoices,
   getMaterialPaymentRequests,
   getMaterials,
@@ -40,7 +33,6 @@ import {
   getStudents,
   loginAdmin,
   sendNotification,
-  stopLiveClass,
   updateBlog,
   updateCourse,
   updateMaterial,
@@ -52,6 +44,13 @@ import {
 } from "../controllers/admin.controller.js";
 import { upload } from "../middlewares/multer.js";
 import { uploadPdf } from "../middlewares/multerPDF.js";
+import {
+  createClass,
+  deleteClass,
+  getClasses,
+  stopLiveClass,
+  updateClass,
+} from "../modules/class.controller.js";
 import {
   addContentController,
   createLessonController,
@@ -115,16 +114,15 @@ router
 router
   .route("/courses/:courseId/lessons/:lessonId/contents/:contentId")
   .delete(verifyAdminJwt, deleteContentController);
-router.route("/get-classes").get(verifyAdminJwt, getClasses);
-router.route("/delete-class").post(verifyAdminJwt, deleteClass);
-router.route("/stop-live-class").post(verifyAdminJwt, stopLiveClass);
 
-router
-  .route("/create-live-class")
-  .post(verifyAdminJwt, upload.none(), createLiveClass);
-router
-  .route("/create-recorded-class")
-  .post(verifyAdminJwt, upload.single("video"), createRecordedClass);
+// Class endpoints
+router.get("/get-classes", verifyAdminJwt, getClasses);
+router.post("/create-class", verifyAdminJwt, createClass);
+router.post("/update-class", verifyAdminJwt, updateClass);
+router.post("/delete-class", verifyAdminJwt, deleteClass);
+router.post("/stop-live-class", verifyAdminJwt, stopLiveClass);
+
+// ---------- for course
 router.route("/create-course").post(
   verifyAdminJwt,
   upload.fields([
@@ -142,13 +140,6 @@ router.route("/update-course").post(
   updateCourse
 );
 router.route("/delete-course").post(verifyAdminJwt, deleteCourse);
-
-// Free Class routes
-router
-  .route("/create-free-class")
-  .post(verifyAdminJwt, upload.none(), createFreeClass);
-router.route("/get-free-classes").get(verifyAdminJwt, getFreeClasses);
-router.route("/delete-free-class").post(verifyAdminJwt, deleteFreeClass);
 
 // Notification routes
 router.route("/send-notification").post(verifyAdminJwt, sendNotification);
