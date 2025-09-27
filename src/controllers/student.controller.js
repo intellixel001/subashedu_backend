@@ -528,32 +528,47 @@ const getLiveClasses = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const enrolledCourses = student.coursesEnrolled;
+  const enrolledCourses = student.coursesEnrolled || [];
 
-  if (!enrolledCourses || enrolledCourses.length === 0) {
+  if (enrolledCourses.length === 0) {
     return res.status(400).json({
       success: false,
       message: "You're not enrolled in any course.",
     });
   }
 
-  const liveClasses = await Class.find({
-    course: { $in: enrolledCourses },
-    isActiveLive: true,
-  }).populate("course", "title");
+  // normalize enrolled course IDs
+  const enrolledCourseIds = enrolledCourses.map((id) =>
+    typeof id === "string" ? new mongoose.Types.ObjectId(id) : id
+  );
 
-  if (!liveClasses || liveClasses.length === 0) {
-    return res.status(200).json({
-      success: true,
-      message: "No live classes available at the moment.",
-      data: [],
-    });
-  }
+  // fetch live classes from enrolled courses
+  const liveClasses = await Class.find({
+    courseId: { $in: enrolledCourseIds },
+  })
+    .populate("courseId", "title courseFor")
+    .select("title subject courseId type startTime image isActiveLive");
+
+  // fetch ALL classes
+  let allClasses = await Class.find()
+    .populate("courseId", "title courseFor")
+    .select(
+      "title subject instructorId courseId courseType billingType type startTime image isActiveLive"
+    );
+
+  // remove classes already in liveClasses from allClasses
+  const liveClassIds = liveClasses.map((cls) => cls._id.toString());
+  allClasses = allClasses.filter(
+    (cls) => !liveClassIds.includes(cls._id.toString())
+  );
 
   return res.status(200).json({
     success: true,
-    message: "Live classes retrieved successfully.",
-    data: liveClasses,
+    message: "Classes retrieved successfully.",
+    data: {
+      live: liveClasses || [],
+      all: allClasses || [],
+    },
   });
 });
 

@@ -39,7 +39,7 @@ router.route("/payment-submit").post(verifyJwt, paymentSubmit);
 router.route("/payment-request").post(verifyJwt, paymentRequest);
 router.route("/course/purchase/:id").post(verifyJwt, purchaseCourseController);
 
-router.route("/live-classes").post(verifyJwt, getLiveClasses);
+router.route("/classes").get(verifyJwt, getLiveClasses);
 router.route("/class/:classId").get(verifyJwt, getClassById);
 router.route("/my-courses").get(verifyJwt, getMyCourses);
 router

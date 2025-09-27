@@ -63,6 +63,10 @@ const materialSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    image: {
+      type: String,
+      trim: true,
+    },
     accessControl: {
       type: String,
       enum: ["purchased", "free", "restricted"],

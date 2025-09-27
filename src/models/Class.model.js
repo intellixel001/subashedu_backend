@@ -12,6 +12,11 @@ const ClassSchema = new Schema(
       required: true,
       trim: true,
     },
+    image: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     instructorId: {
       type: mongoose.Types.ObjectId,
       ref: "Instructor",

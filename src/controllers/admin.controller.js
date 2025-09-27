@@ -1,5 +1,6 @@
 import axios from "axios";
 import fs from "fs";
+import mongoose from "mongoose";
 import { Material } from "../models/Material.model.js";
 import { Notification } from "../models/notification.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -428,12 +429,54 @@ const deleteStaff = asyncHandler(async (req, res, next) => {
 
 // Student functions
 const getStudents = asyncHandler(async (req, res, next) => {
-  const students = await Student.find({});
+  // 1️⃣ Fetch all students
+  const students = await Student.find().select("-password -refreshToken");
+
+  // 2️⃣ For each student, fetch their enrolled courses, purchased materials, and classes
+  const detailedStudents = await Promise.all(
+    students.map(async (student) => {
+      // Fetch enroll course documents for this student
+      const enrollDocs = await EnrollCourse.find({
+        userid: student._id,
+      }).populate({
+        path: "materials",
+        select: "title price accessControl pdfs image",
+      });
+
+      // Extract course IDs from enrolled docs
+      // Extract course IDs from enrolled docs
+      const enrolledCourseIds = enrollDocs.map(
+        (doc) => new mongoose.Types.ObjectId(doc.id)
+      );
+
+      // Fetch class info for enrolled courses
+      const classes = await Class.find({ courseId: { $in: enrolledCourseIds } })
+        .select(
+          "title subject type startTime image courseId isActiveLive instructorId"
+        )
+        .populate("courseId", "title courseFor"); // populate course info
+
+      // Collect purchased materials
+      const purchasedMaterials = enrollDocs.reduce((acc, doc) => {
+        if (doc.materials && doc.materials.length > 0) {
+          acc.push(...doc.materials);
+        }
+        return acc;
+      }, []);
+
+      return {
+        ...student.toObject(),
+        enrolledCourses: enrolledCourseIds,
+        purchasedMaterials,
+        classes,
+      };
+    })
+  );
 
   return res.status(200).json({
     success: true,
-    data: students,
-    message: students.length === 0 ? "No students found" : undefined,
+    data: detailedStudents,
+    message: detailedStudents.length === 0 ? "No students found" : undefined,
   });
 });
 
@@ -2466,7 +2509,7 @@ const CDN_API = "https://cdn.adletica.com/upload";
 const CDN_UPLOAD_URL = "https://cdn.adletica.com/upload";
 
 const createMaterial = asyncHandler(async (req, res) => {
-  const { title, price, forCourses, accessControl } = req.body;
+  const { title, price, forCourses, accessControl, image } = req.body;
 
   // Validation
   if (!title || !price || !req.files || req.files.length === 0) {
@@ -2530,6 +2573,7 @@ const createMaterial = asyncHandler(async (req, res) => {
     price: price.trim(),
     forCourses: parsedCourses,
     accessControl: accessControl || "restricted",
+    image: image?.trim() || undefined,
   });
 
   if (parsedCourses.length > 0) {
@@ -2556,7 +2600,7 @@ const getMaterials = asyncHandler(async (req, res, next) => {
 });
 
 const updateMaterial = asyncHandler(async (req, res, next) => {
-  const { _id, title, price, forCourses, accessControl } = req.body;
+  const { _id, title, price, forCourses, accessControl, image } = req.body;
 
   if (!_id || !title || !price) {
     if (req.file) fs.unlinkSync(req.file.path);
@@ -2622,6 +2666,7 @@ const updateMaterial = asyncHandler(async (req, res, next) => {
   material.publicId = publicId;
   material.price = price.trim();
   material.forCourses = parsedCourses;
+  material.image = image;
   material.accessControl = accessControl || material.accessControl;
 
   await material.save();

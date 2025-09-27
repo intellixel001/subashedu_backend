@@ -14,6 +14,7 @@ export const createClass = async (req, res) => {
       type,
       videoLink,
       startTime,
+      image,
     } = req.body;
 
     console.log(req.body);
@@ -39,6 +40,7 @@ export const createClass = async (req, res) => {
       courseType,
       videoLink: videoLink || "",
       startTime: startTime || null,
+      image,
       isActiveLive: type === "live" ? false : null,
     });
 
@@ -64,6 +66,7 @@ export const updateClass = async (req, res) => {
       courseType,
       billingType,
       type,
+      image,
       videoLink,
       startTime,
     } = req.body;
@@ -86,6 +89,7 @@ export const updateClass = async (req, res) => {
     cls.instructorId = instructorId ?? cls.instructorId;
     cls.billingType = billingType ?? cls.billingType;
     cls.type = type ?? cls.type;
+    cls.image = image ?? cls.image;
     cls.courseType = courseType ?? cls.courseType;
     cls.videoLink = videoLink ?? cls.videoLink;
     cls.startTime = startTime ?? cls.startTime;
