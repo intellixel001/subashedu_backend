@@ -1,6 +1,5 @@
 import axios from "axios";
 import fs from "fs";
-import mongoose from "mongoose";
 import { Material } from "../models/Material.model.js";
 import { Notification } from "../models/notification.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -429,10 +428,8 @@ const deleteStaff = asyncHandler(async (req, res, next) => {
 
 // Student functions
 const getStudents = asyncHandler(async (req, res, next) => {
-  // 1️⃣ Fetch all students
   const students = await Student.find().select("-password -refreshToken");
 
-  // 2️⃣ For each student, fetch their enrolled courses, purchased materials, and classes
   const detailedStudents = await Promise.all(
     students.map(async (student) => {
       // Fetch enroll course documents for this student
@@ -440,21 +437,18 @@ const getStudents = asyncHandler(async (req, res, next) => {
         userid: student._id,
       }).populate({
         path: "materials",
-        select: "title price accessControl pdfs image",
+        select: "_id title price accessControl pdfs image",
       });
 
-      // Extract course IDs from enrolled docs
-      // Extract course IDs from enrolled docs
-      const enrolledCourseIds = enrollDocs.map(
-        (doc) => new mongoose.Types.ObjectId(doc.id)
-      );
+      // Extract actual course IDs from enrolled docs
+      const enrolledCourseIds = enrollDocs.map((doc) => doc.id);
 
-      // Fetch class info for enrolled courses
-      const classes = await Class.find({ courseId: { $in: enrolledCourseIds } })
-        .select(
-          "title subject type startTime image courseId isActiveLive instructorId"
-        )
-        .populate("courseId", "title courseFor"); // populate course info
+      // Fetch classes for enrolled courses
+      const classes = await Class.find({
+        courseId: { $in: enrolledCourseIds },
+      }).select(
+        "_id title subject type startTime image courseId isActiveLive instructorId"
+      );
 
       // Collect purchased materials
       const purchasedMaterials = enrollDocs.reduce((acc, doc) => {
@@ -464,18 +458,24 @@ const getStudents = asyncHandler(async (req, res, next) => {
         return acc;
       }, []);
 
+      // Return structured student info
       return {
         ...student.toObject(),
-        enrolledCourses: enrolledCourseIds,
-        purchasedMaterials,
-        classes,
+        enrolledCourses: enrolledCourseIds, // course IDs
+        classes: classes.map((cls) => cls._id), // class IDs
+        purchasedMaterials: purchasedMaterials.map((mat) => mat._id), // material IDs
       };
     })
   );
 
+  const allclasses = await Class.find().select("_id title");
+  const allcourses = await Course.find().select("_id title");
+
   return res.status(200).json({
     success: true,
     data: detailedStudents,
+    courses: allcourses,
+    classess: allclasses,
     message: detailedStudents.length === 0 ? "No students found" : undefined,
   });
 });
