@@ -11,6 +11,7 @@ import {
   getMyCourses,
   getNotifications,
   getSenders,
+  getSingleClass,
   getStudentMaterials,
   loginStudent,
   paymentRequest,
@@ -65,6 +66,7 @@ router
   .route("/submit-material-payment-request")
   .post(verifyJwt, submitMaterialPayment);
 
+router.route("/get-single-class/:id").get(verifyJwt, getSingleClass);
 router.route("/get-student-materials").get(verifyJwt, getStudentMaterials);
 router.route("/get-enrolled-course/:id").get(verifyJwt, getMyEnrolledCourse);
 router.route("/get-mysingle-material/:id").get(verifyJwt, getMySinglematerial);

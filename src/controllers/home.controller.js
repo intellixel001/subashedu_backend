@@ -171,6 +171,34 @@ const getSingleCourse = asyncHandler(async (req, res, next) => {
     .json({ success: true, data: course, message: "Fetch successful" });
 });
 
+const getByTypeCourse = asyncHandler(async (req, res, next) => {
+  const { type } = req.params;
+
+  const course = await Course.find({ courseFor: type }).select(
+    "id title short_description description price offer_price thumbnailUrl subjects tags instructors studentsEnrolled courseFor type"
+  );
+
+  console.log(type);
+
+  return res
+    .status(200)
+    .json({ success: true, data: course || [], message: "Fetch successful" });
+});
+
+const getFreeCLass = asyncHandler(async (req, res, next) => {
+  const freeClasses = await Class.find({ billingType: "free" }).select(
+    "title subject image courseType type startTime isActiveLive"
+  );
+
+  console.log(freeClasses);
+
+  return res.status(200).json({
+    success: true,
+    data: freeClasses || [],
+    message: "Fetch successful",
+  });
+});
+
 const getCoursesByCategory = asyncHandler(async (req, res, next) => {
   const { category: encodedCategory } = req.params;
 
@@ -459,8 +487,10 @@ export {
   getAllCourse,
   getBlog,
   getBlogs,
+  getByTypeCourse,
   getCourse,
   getCoursesByCategory,
+  getFreeCLass,
   getHomePageData,
   getMaterialForPurchase,
   getMaterials,

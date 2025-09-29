@@ -1059,6 +1059,20 @@ const getStudentMaterials = asyncHandler(async (req, res, next) => {
   });
 });
 
+const getSingleClass = asyncHandler(async (req, res, next) => {
+  const classId = req.params.id;
+
+  // const student
+
+  // console.log(classId);
+
+  return res.status(200).json({
+    success: true,
+    message: "successfully fetched",
+    data: student,
+  });
+});
+
 export {
   clearNotifications,
   currentStudent,
@@ -1071,6 +1085,7 @@ export {
   getMyCourses,
   getNotifications,
   getSenders,
+  getSingleClass,
   getStudentMaterials,
   loginStudent,
   paymentRequest,

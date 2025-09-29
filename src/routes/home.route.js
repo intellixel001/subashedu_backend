@@ -3,8 +3,10 @@ import {
   getAllCourse,
   getBlog,
   getBlogs,
+  getByTypeCourse,
   getCourse,
   getCoursesByCategory,
+  getFreeCLass,
   getHomePageData,
   getMaterialForPurchase,
   getMaterials,
@@ -21,9 +23,11 @@ router.route("/get-homepage-data").get(getHomePageData);
 router.route("/course/:id").get(getCourse);
 router.route("/get-all-course").get(getAllCourse);
 router.route("/get-single-course/:id").get(getSingleCourse);
+router.route("/get-course-bytype/:type").get(getByTypeCourse);
 router.route("/courses/:category").get(getCoursesByCategory);
 router.route("/notice").get(getNotice);
 router.route("/search").get(searchCourses);
+router.route("/free-class").get(getFreeCLass);
 router.route("/get-blogs").get(getBlogs);
 router.route("/blog/:id").get(getBlog);
 
