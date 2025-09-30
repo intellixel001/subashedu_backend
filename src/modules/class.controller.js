@@ -17,8 +17,7 @@ export const createClass = async (req, res) => {
       image,
     } = req.body;
 
-    console.log(req.body);
-
+ 
     if (!title || !subject || !instructorId || !courseId || !type)
       return res
         .status(400)

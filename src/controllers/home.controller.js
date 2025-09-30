@@ -178,19 +178,15 @@ const getByTypeCourse = asyncHandler(async (req, res, next) => {
     "id title short_description description price offer_price thumbnailUrl subjects tags instructors studentsEnrolled courseFor type"
   );
 
-  console.log(type);
-
   return res
     .status(200)
     .json({ success: true, data: course || [], message: "Fetch successful" });
 });
 
 const getFreeCLass = asyncHandler(async (req, res, next) => {
-  const freeClasses = await Class.find({ billingType: "free" }).select(
+  const freeClasses = await Class.find().select(
     "title subject image courseType type startTime isActiveLive"
   );
-
-  console.log(freeClasses);
 
   return res.status(200).json({
     success: true,

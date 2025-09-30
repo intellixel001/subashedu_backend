@@ -1061,15 +1061,53 @@ const getStudentMaterials = asyncHandler(async (req, res, next) => {
 
 const getSingleClass = asyncHandler(async (req, res, next) => {
   const classId = req.params.id;
+  const student = req.student;
 
-  // const student
+  if (!classId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid class ID" });
+  }
 
-  // console.log(classId);
+  // 1️⃣ Get enrollIds from student
+  const enrollIds =
+    student?.coursesEnrolled?.map((id) => new mongoose.Types.ObjectId(id)) ||
+    [];
+
+  // 2️⃣ Get actual courseIds from EnrollCourse collection
+  const enrolledCourses = await EnrollCourse.find({
+    _id: { $in: enrollIds },
+  }).select("id");
+
+  const courseIds = enrolledCourses.map((e) => e.id.toString());
+
+  // 3️⃣ Get the class
+  const actualClass = await Class.findOne({ _id: classId });
+  if (!actualClass) {
+    return res.status(404).json({ success: false, message: "Class not found" });
+  }
+
+  // 4️⃣ Check if the class belongs to one of the student’s courses
+  const isEnrolled = courseIds.includes(actualClass.courseId.toString());
+
+  if (isEnrolled) {
+    // full access
+    return res.status(200).json({
+      success: true,
+      message: "Successfully fetched enrolled class",
+      data: actualClass,
+    });
+  }
+
+  // restricted view
+  const publicClass = await Class.findById(classId).select(
+    "title subject courseId type startTime image isActiveLive"
+  );
 
   return res.status(200).json({
     success: true,
-    message: "successfully fetched",
-    data: student,
+    message: "Successfully fetched public class",
+    id: publicClass?.courseId,
   });
 });
 
