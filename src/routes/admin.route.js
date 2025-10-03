@@ -47,6 +47,7 @@ import { uploadPdf } from "../middlewares/multerPDF.js";
 import {
   createClass,
   deleteClass,
+  getClassById,
   getClasses,
   stopLiveClass,
   updateClass,
@@ -119,6 +120,7 @@ router
 router.get("/get-classes", verifyAdminJwt, getClasses);
 router.post("/create-class", verifyAdminJwt, createClass);
 router.post("/update-class", verifyAdminJwt, updateClass);
+router.get("/get-class/:id", verifyAdminJwt, getClassById);
 router.post("/delete-class", verifyAdminJwt, deleteClass);
 router.post("/stop-live-class", verifyAdminJwt, stopLiveClass);
 
