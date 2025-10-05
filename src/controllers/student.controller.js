@@ -606,6 +606,158 @@ const getClassById = asyncHandler(async (req, res, next) => {
   );
 });
 
+export const getMyEnrolledCourses = asyncHandler(async (req, res, next) => {
+  try {
+    const studentId = req.student?._id;
+    if (!studentId)
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    // 1️⃣ Get all enrollments for this student
+    const enrollments = await EnrollCourse.find({ userid: studentId })
+      .lean()
+      .populate({
+        path: "id",
+        model: Course,
+        select:
+          "title short_description subjects thumbnailUrl instructors offer_price price courseFor lessons materials",
+      });
+
+    if (!enrollments || enrollments.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        message: "No enrolled courses found.",
+      });
+    }
+
+    // 2️⃣ Loop through each enrolled course and sync with the main course
+    const syncedData = await Promise.all(
+      enrollments.map(async (enroll) => {
+        const mainCourse = enroll.id;
+        let updated = false;
+
+        if (!mainCourse) return enroll;
+
+        // ---------- SYNC LESSONS ----------
+        const mainLessons = mainCourse.lessons || [];
+        const enrolledLessons = enroll.enrollcourse || [];
+
+        const enrolledMap = new Map(
+          enrolledLessons.map((l) => [l._id.toString(), l])
+        );
+
+        const syncedLessons = mainLessons.map((lesson) => {
+          const existing = enrolledMap.get(lesson._id.toString());
+          if (existing) {
+            // update lesson info
+            existing.name = lesson.name;
+            existing.description = lesson.description;
+            existing.type = lesson.type;
+            existing.requiredForNext = lesson.requiredForNext;
+
+            // sync lesson contents
+            const enrolledContents = existing.contents || [];
+            const contentMap = new Map(
+              enrolledContents.map((c) => [c._id.toString(), c])
+            );
+
+            existing.contents = lesson.contents.map((content) => {
+              const existContent = contentMap.get(content._id.toString());
+              if (existContent) {
+                existContent.name = content.name;
+                existContent.type = content.type;
+                existContent.link = content.link;
+                existContent.requiredForNext = content.requiredForNext;
+                existContent.description = content.description;
+                return existContent;
+              } else {
+                return { ...content, status: "locked" };
+              }
+            });
+
+            updated = true;
+            return existing;
+          } else {
+            updated = true;
+            return {
+              ...lesson,
+              status: "locked",
+              contents: lesson.contents.map((c) => ({
+                ...c,
+                status: "locked",
+              })),
+            };
+          }
+        });
+
+        // ---------- SYNC MATERIALS ----------
+        const mainMaterials =
+          mainCourse.materials?.map((m) => m.toString()) || [];
+        const enrolledMaterials =
+          enroll.materials?.map((m) => m.toString()) || [];
+
+        if (
+          JSON.stringify(mainMaterials) !== JSON.stringify(enrolledMaterials)
+        ) {
+          enroll.materials = mainCourse.materials;
+          updated = true;
+        }
+
+        // ---------- SAVE UPDATES ----------
+        if (updated) {
+          await EnrollCourse.updateOne(
+            { _id: enroll._id },
+            {
+              $set: {
+                enrollcourse: syncedLessons,
+                materials: mainCourse.materials,
+              },
+            }
+          );
+
+          enroll.enrollcourse = syncedLessons;
+          enroll.materials = mainCourse.materials;
+        }
+
+        // 3️⃣ Return cleaned-up data structure
+        return {
+          _id: enroll._id,
+          status: enroll.status,
+          paymentMethod: enroll.paymentMethod,
+          transactionId: enroll.tranjectionid,
+          course: {
+            _id: mainCourse._id,
+            title: mainCourse.title,
+            short_description: mainCourse.short_description,
+            thumbnailUrl: mainCourse.thumbnailUrl,
+            offer_price: mainCourse.offer_price,
+            price: mainCourse.price,
+            instructors: mainCourse.instructors,
+            courseFor: mainCourse.courseFor,
+          },
+          createdAt: enroll.createdAt,
+          synced: updated,
+        };
+      })
+    );
+
+    const coursesOnly = syncedData.map((enroll) => enroll.course || {});
+    console.log(coursesOnly);
+    return res.status(200).json({
+      success: true,
+      data: coursesOnly,
+      message: "Fetched and synced enrolled courses successfully!",
+    });
+  } catch (error) {
+    console.error("Error in getMyCourses:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while fetching enrolled courses",
+      error: error.message,
+    });
+  }
+});
+
 const getMyCourses = asyncHandler(async (req, res, next) => {
   const { _id: studentId } = req.student;
 

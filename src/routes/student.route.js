@@ -9,6 +9,7 @@ import {
   getLiveClasses,
   getMaterialPaymentStatus,
   getMyCourses,
+  getMyEnrolledCourses,
   getNotifications,
   getSenders,
   getSingleClass,
@@ -43,6 +44,8 @@ router.route("/course/purchase/:id").post(verifyJwt, purchaseCourseController);
 router.route("/classes").get(verifyJwt, getLiveClasses);
 router.route("/class/:classId").get(verifyJwt, getClassById);
 router.route("/my-courses").get(verifyJwt, getMyCourses);
+router.route("/my-enrolled-courses").get(verifyJwt, getMyEnrolledCourses);
+
 router
   .route("/get-course-classes-subjects/:courseId")
   .get(verifyJwt, getCourseClasses);

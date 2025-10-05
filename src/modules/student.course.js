@@ -12,7 +12,7 @@ export const getMyEnrolledCourse = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    // find student
+    // Find student
     const myData = await Student.findById(studentId).lean();
     if (!myData) {
       return res
@@ -20,7 +20,7 @@ export const getMyEnrolledCourse = async (req, res) => {
         .json({ success: false, message: "Student not found" });
     }
 
-    // check enrollment
+    // Check enrollment
     const enrolledCourseId = myData.coursesEnrolled?.find(
       (c) => c.toString() === courseId
     );
@@ -31,18 +31,21 @@ export const getMyEnrolledCourse = async (req, res) => {
       });
     }
 
-    // fetch enrolled + main course
+    // Fetch enrolled course and main course
     const enrolledCourseData = await EnrollCourse.findOne({
       id: courseId,
       userid: myData._id,
     });
-    const mainCourse = await Course.findById(courseId).lean();
+
+    const mainCourse = await Course.findById(courseId)
+      .populate("classes") // populate classes
+      .populate("materials") // populate materials
+      .lean();
 
     if (!enrolledCourseData || !mainCourse) {
-      return res.status(404).json({
-        success: false,
-        message: "Course not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "Course not found" });
     }
 
     let updated = false;
@@ -51,7 +54,6 @@ export const getMyEnrolledCourse = async (req, res) => {
     const mainLessons = mainCourse.lessons || [];
     const enrolledLessons = enrolledCourseData.enrollcourse || [];
 
-    // convert enrolled lessons to map for quick lookup
     const enrolledMap = new Map(
       enrolledLessons.map((l) => [l._id.toString(), l])
     );
@@ -60,13 +62,11 @@ export const getMyEnrolledCourse = async (req, res) => {
       const existing = enrolledMap.get(lesson._id.toString());
 
       if (existing) {
-        // update basic fields
         existing.name = lesson.name;
         existing.description = lesson.description;
         existing.type = lesson.type;
         existing.requiredForNext = lesson.requiredForNext;
 
-        // ---------- SYNC CONTENTS ----------
         const enrolledContents = existing.contents || [];
         const contentMap = new Map(
           enrolledContents.map((c) => [c._id.toString(), c])
@@ -75,7 +75,6 @@ export const getMyEnrolledCourse = async (req, res) => {
         existing.contents = lesson.contents.map((content) => {
           const existContent = contentMap.get(content._id.toString());
           if (existContent) {
-            // update existing content
             existContent.name = content.name;
             existContent.type = content.type;
             existContent.link = content.link;
@@ -83,66 +82,64 @@ export const getMyEnrolledCourse = async (req, res) => {
             existContent.description = content.description;
             return existContent;
           } else {
-            // new content → add fresh with default progress
-            return {
-              ...content,
-              status: "locked", // you can track status per content too
-            };
+            return { ...content, status: "locked" };
           }
         });
 
         updated = true;
         return existing;
       } else {
-        // new lesson → add fresh
         updated = true;
         return {
           ...lesson,
           status: "locked",
-          contents: lesson.contents.map((c) => ({
-            ...c,
-            status: "locked",
-          })),
+          contents: lesson.contents.map((c) => ({ ...c, status: "locked" })),
         };
       }
     });
 
-    // overwrite lessons
     enrolledCourseData.enrollcourse = syncedLessons;
 
     // ---------- SYNC MATERIALS ----------
     const enrolledMaterials =
       enrolledCourseData.materials?.map((m) => m.toString()) || [];
-    const mainMaterials = mainCourse.materials?.map((m) => m.toString()) || [];
+    const mainMaterials =
+      mainCourse.materials?.map((m) => m._id.toString()) || [];
 
-    // replace with fresh materials (or merge if you want)
     if (JSON.stringify(enrolledMaterials) !== JSON.stringify(mainMaterials)) {
-      enrolledCourseData.materials = mainCourse.materials;
+      enrolledCourseData.materials = mainMaterials;
       updated = true;
     }
 
-    // ---------- SAVE IF UPDATED ----------
-    // ---------- SAVE IF UPDATED ----------
     if (updated) {
       await EnrollCourse.updateOne(
         { _id: enrolledCourseData._id },
         {
           $set: {
             enrollcourse: syncedLessons,
-            materials: mainCourse.materials,
+            materials: mainMaterials,
           },
         }
       );
-
-      // also reflect the changes in response (without another query)
       enrolledCourseData.enrollcourse = syncedLessons;
-      enrolledCourseData.materials = mainCourse.materials;
+      enrolledCourseData.materials = mainMaterials;
     }
+
+    // ---------- RESPONSE ----------
+    const responseData = {
+      ...(enrolledCourseData.toObject
+        ? enrolledCourseData.toObject()
+        : enrolledCourseData),
+      thumbnailUrl: mainCourse.thumbnailUrl || "",
+      classes: mainCourse.classes || [],
+      materials: mainCourse.materials || [],
+      ...mainCourse,
+    };
 
     return res.status(200).json({
       success: true,
       message: "Enrolled course synced successfully",
-      data: enrolledCourseData,
+      data: responseData,
       synced: updated,
     });
   } catch (error) {
