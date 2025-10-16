@@ -202,7 +202,7 @@ router
 router.route("/get-materials").get(verifyAdminJwt, getMaterials);
 router
   .route("/update-material")
-  .post(verifyAdminJwt, uploadPdf.single("pdf"), updateMaterial);
+  .post(verifyAdminJwt, uploadPdf.array("pdfs", 10), updateMaterial);
 router.route("/delete-material").post(verifyAdminJwt, deleteMaterial);
 router
   .route("/get-material-payment-requests")

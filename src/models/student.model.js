@@ -15,6 +15,18 @@ const studentSchema = new Schema(
       type: String,
       require: true,
     },
+    otp: {
+      type: Number,
+      require: false,
+    },
+    balance: {
+      type: Number,
+      require: false,
+    },
+    lavel: {
+      type: Number,
+      require: false,
+    },
     email: {
       type: String,
       required: [true, "Email is required"],
@@ -23,7 +35,7 @@ const studentSchema = new Schema(
     },
     phone: {
       type: String,
-      required: [true, "Phone number is required"],
+      required: [false, "Phone number is required"],
     },
 
     photoUrl: {
@@ -36,7 +48,7 @@ const studentSchema = new Schema(
     // Educational Information
     educationLevel: {
       type: String,
-      required: [true, "Education level is required"],
+      required: [false, "Education level is required"],
       enum: {
         values: [
           "class 9",
@@ -53,7 +65,7 @@ const studentSchema = new Schema(
     },
     institution: {
       type: String,
-      required: [true, "Institution name is required"],
+      required: [false, "Institution name is required"],
       trim: true,
       maxlength: [200, "Institution name cannot exceed 200 characters"],
     },
@@ -101,6 +113,10 @@ const studentSchema = new Schema(
       type: Array,
       required: false,
       default: [],
+    },
+    examapp: {
+      type: Boolean,
+      default: false,
     },
     // Account Security
     password: {

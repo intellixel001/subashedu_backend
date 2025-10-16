@@ -44,7 +44,101 @@ const registerStudent = asyncHandler(async function (req, res, next) {
       motherName = "",
       guardianPhone = "",
       password,
+      from: fromwhere,
     } = req.body;
+
+    console.log("Register request from:", fromwhere);
+    res.setHeader("Content-Type", "application/json");
+
+    // ========================================
+    // 🧩 CASE 1: ExamApp Registration
+    // ========================================
+    if (fromwhere === "examapp") {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new ApiError(400, "Invalid email format", [
+          { path: ["email"], message: "Invalid email address" },
+        ]);
+      }
+
+      const existingUser = await Student.findOne({ email });
+
+      // 1️⃣ Already registered for examapp
+      if (existingUser && existingUser.examapp === true) {
+        throw new ApiError(409, "You have already registered our exam app", [
+          { path: ["email"], message: "You have already registered" },
+        ]);
+      }
+
+      // 2️⃣ Exists but not yet registered for examapp
+      if (existingUser && !existingUser.examapp) {
+        existingUser.examapp = true;
+        await existingUser.save();
+
+        const { accessToken, refreshToken } =
+          await generateAccessAndRefreshToken(existingUser._id);
+
+        return res.status(200).json(
+          new ApiResponse(200, "You have registered with Suvashedu", {
+            accessToken,
+            refreshToken,
+            user: {
+              id: existingUser._id,
+              email: existingUser.email,
+              fullName: existingUser.fullName,
+            },
+          })
+        );
+      }
+
+      // 3️⃣ No existing user — create new student
+      const lastDocument = await Student.findOne().sort({ _id: -1 });
+      let newRegistrationNumber;
+      if (lastDocument) {
+        newRegistrationNumber = parseInt(lastDocument.registrationNumber) + 1;
+      } else {
+        const defaultNumber = process.env.CURRENT_STUDENT_NUMBER || "1000";
+        if (!defaultNumber || isNaN(parseInt(defaultNumber))) {
+          throw new ApiError(
+            500,
+            "Invalid CURRENT_STUDENT_NUMBER configuration"
+          );
+        }
+        newRegistrationNumber = parseInt(defaultNumber) + 1;
+      }
+
+      const student = await Student.create({
+        registrationNumber: newRegistrationNumber.toString(),
+        fullName,
+        email,
+        password,
+        examapp: true,
+      });
+
+      if (!student) {
+        throw new ApiError(500, "Error creating new student profile");
+      }
+
+      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+        student._id
+      );
+
+      return res.status(201).json(
+        new ApiResponse(201, "User registered successfully", {
+          accessToken,
+          refreshToken,
+          user: {
+            id: student._id,
+            email: student.email,
+            fullName: student.fullName,
+          },
+        })
+      );
+    }
+
+    // ========================================
+    // 🧩 CASE 2: Normal Registration
+    // ========================================
 
     // Validate required fields
     const missingFields = [];
@@ -77,14 +171,12 @@ const registerStudent = asyncHandler(async function (req, res, next) {
       });
 
     if (missingFields.length > 0) {
-      res.setHeader("Content-Type", "application/json");
       throw new ApiError(400, "Missing required fields", missingFields);
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      res.setHeader("Content-Type", "application/json");
       throw new ApiError(400, "Invalid email format", [
         { path: ["email"], message: "Invalid email address" },
       ]);
@@ -93,7 +185,6 @@ const registerStudent = asyncHandler(async function (req, res, next) {
     // Validate phone format (11 digits)
     const phoneRegex = /^\d{11}$/;
     if (!phoneRegex.test(phone)) {
-      res.setHeader("Content-Type", "application/json");
       throw new ApiError(400, "Invalid phone number", [
         { path: ["phone"], message: "Phone number must be 11 digits" },
       ]);
@@ -102,7 +193,6 @@ const registerStudent = asyncHandler(async function (req, res, next) {
     // Check if user already exists
     const isAlreadyExists = await Student.findOne({ email });
     if (isAlreadyExists) {
-      res.setHeader("Content-Type", "application/json");
       throw new ApiError(409, "User already exists with this email", [
         { path: ["email"], message: "Email is already registered" },
       ]);
@@ -116,7 +206,6 @@ const registerStudent = asyncHandler(async function (req, res, next) {
     } else {
       const defaultNumber = process.env.CURRENT_STUDENT_NUMBER || "1000";
       if (!defaultNumber || isNaN(parseInt(defaultNumber))) {
-        res.setHeader("Content-Type", "application/json");
         throw new ApiError(500, "Invalid CURRENT_STUDENT_NUMBER configuration");
       }
       newRegistrationNumber = parseInt(defaultNumber) + 1;
@@ -139,17 +228,14 @@ const registerStudent = asyncHandler(async function (req, res, next) {
     });
 
     if (!student) {
-      res.setHeader("Content-Type", "application/json");
       throw new ApiError(500, "Error creating new student profile");
     }
 
-    res.setHeader("Content-Type", "application/json");
     return res
       .status(201)
       .json(new ApiResponse(201, "User registered successfully", {}));
   } catch (error) {
     console.error("Unexpected error in registerStudent:", error);
-    res.setHeader("Content-Type", "application/json");
     if (error instanceof ApiError) {
       return res.status(error.statusCode).json({
         success: false,
@@ -208,9 +294,12 @@ const currentStudent = asyncHandler(async function (req, res, next) {
 });
 
 const loginStudent = asyncHandler(async function (req, res, next) {
-  const { loginId, password } = req.body;
+  const { loginId, password, from: fromwhere } = req.body;
 
-  if (!(loginId && password)) {
+  res.setHeader("Content-Type", "application/json");
+
+  // 🧩 Validate input
+  if (!loginId || !password) {
     return res.status(400).json({
       success: false,
       message: "Enter valid credentials",
@@ -218,6 +307,7 @@ const loginStudent = asyncHandler(async function (req, res, next) {
     });
   }
 
+  // 🧩 Find student by email or registration number
   const student = await Student.findOne({
     $or: [{ email: loginId }, { registrationNumber: loginId }],
   }).select("+password");
@@ -230,8 +320,8 @@ const loginStudent = asyncHandler(async function (req, res, next) {
     });
   }
 
+  // 🧩 Check password
   const isPasswordCorrect = await student.isPasswordCorrect(password);
-
   if (!isPasswordCorrect) {
     return res.status(400).json({
       success: false,
@@ -240,28 +330,51 @@ const loginStudent = asyncHandler(async function (req, res, next) {
     });
   }
 
+  // ================================
+  // 🧩 Handle ExamApp-Specific Login
+  // ================================
+  if (fromwhere === "examapp") {
+    // Case 1: Student has not activated examapp yet
+    if (!student.examapp) {
+      student.examapp = true;
+      await student.save();
+    }
+  }
+
+  // 🧩 Remove sensitive fields
   const loggedInUser = await Student.findById(student._id).select(
     "-password -refreshToken"
   );
 
+  // 🧩 Generate tokens
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
     loggedInUser._id
   );
 
-  if (!(accessToken || refreshToken)) {
+  if (!(accessToken && refreshToken)) {
     throw new ApiError(500, "Error generating tokens");
   }
+
+  // 🧩 Cookie options
   const options = {
     httpOnly: true,
     secure: process.env.SERVER_STATE === "production",
     path: "/",
+    sameSite: "lax",
   };
 
+  // 🧩 Response
   return res
     .status(200)
     .cookie("accessToken", accessToken, options)
     .cookie("refreshToken", refreshToken, options)
-    .json(new ApiResponse(200, "Student successfully logged in", loggedInUser));
+    .json(
+      new ApiResponse(200, "Student successfully logged in", {
+        user: loggedInUser,
+        accessToken,
+        refreshToken,
+      })
+    );
 });
 
 const refreshAccessToken = asyncHandler(async function (req, res, next) {
