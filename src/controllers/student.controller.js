@@ -47,7 +47,6 @@ const registerStudent = asyncHandler(async function (req, res, next) {
       from: fromwhere,
     } = req.body;
 
-    console.log("Register request from:", fromwhere);
     res.setHeader("Content-Type", "application/json");
 
     // ========================================
@@ -855,7 +854,6 @@ export const getMyEnrolledCourses = asyncHandler(async (req, res, next) => {
     );
 
     const coursesOnly = syncedData.map((enroll) => enroll.course || {});
-    console.log(coursesOnly);
     return res.status(200).json({
       success: true,
       data: coursesOnly,

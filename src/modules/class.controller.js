@@ -111,8 +111,6 @@ export const updateClass = async (req, res) => {
       updateData.courseId = course._id;
     }
 
-    console.log(updateData);
-
     const result = await Class.updateOne({ _id }, { $set: updateData });
 
     if (result.matchedCount === 0)

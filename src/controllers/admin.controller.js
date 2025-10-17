@@ -2219,6 +2219,7 @@ const createBlog = asyncHandler(async (req, res) => {
         authorPhoto[0].path,
         "author-photos"
       );
+
       if (!uploadResult?.url) {
         return res.status(500).json({
           success: false,
@@ -2600,7 +2601,7 @@ const getMaterials = asyncHandler(async (req, res, next) => {
 });
 
 const updateMaterial = asyncHandler(async (req, res, next) => {
-  const { _id, title, price, forCourses, accessControl, image } = req.body;
+   const { _id, title, price, forCourses, accessControl, image } = req.body;
 
   if (!_id || !title || !price) {
     if (req.file) fs.unlinkSync(req.file.path);

@@ -43,7 +43,6 @@ import {
   verifyPaymentMaterial,
 } from "../controllers/admin.controller.js";
 import { upload } from "../middlewares/multer.js";
-import { uploadPdf } from "../middlewares/multerPDF.js";
 import {
   createClass,
   deleteClass,
@@ -52,6 +51,8 @@ import {
   stopLiveClass,
   updateClass,
 } from "../modules/class.controller.js";
+
+import { uploadPdf } from "../middlewares/multerPDF.js";
 import {
   addContentController,
   createLessonController,
@@ -60,6 +61,7 @@ import {
   updateContentController,
   updateLessonController,
 } from "../modules/course.js";
+import { uploadOnCloudinary } from "../utils/uploadOnCloudinary.js";
 import { verifyAdminJwt } from "./../middlewares/verifyAdminJwt.js";
 
 const router = Router();
@@ -197,12 +199,12 @@ router.route("/delete-blog").post(verifyAdminJwt, deleteBlog);
 
 router
   .route("/create-material")
-  .post(verifyAdminJwt, uploadPdf.array("pdfs", 10), createMaterial);
+  .post(verifyAdminJwt, uploadPdf.array("pdfs", 1000), createMaterial);
 
 router.route("/get-materials").get(verifyAdminJwt, getMaterials);
 router
   .route("/update-material")
-  .post(verifyAdminJwt, uploadPdf.array("pdfs", 10), updateMaterial);
+  .post(verifyAdminJwt, uploadPdf.array("pdfs", 1000), updateMaterial);
 router.route("/delete-material").post(verifyAdminJwt, deleteMaterial);
 router
   .route("/get-material-payment-requests")
@@ -216,5 +218,41 @@ router
 router
   .route("/get-courses-for-materials")
   .get(verifyAdminJwt, getCoursesForMaterials);
+
+router.post(
+  "/upload-image",
+  verifyAdminJwt,
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ success: false, message: "No file uploaded" });
+      }
+
+      // Upload to Cloudinary
+      const uploadResult = await uploadOnCloudinary(
+        req.file.path,
+        "blog-thumbnails"
+      );
+      if (!uploadResult?.url) {
+        return res.status(500).json({
+          success: false,
+          message: "Error uploading thumbnail",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Thumbnail uploaded successfully",
+        url: uploadResult.url,
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
 
 export default router;
